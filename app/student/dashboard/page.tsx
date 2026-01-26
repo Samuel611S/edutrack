@@ -47,7 +47,7 @@ export default function StudentDashboard() {
 
   const handleLogout = () => {
     logout()
-    router.push("/")
+    router.push("/login")
   }
 
   const enrolledCourses: EnrolledCourse[] = [

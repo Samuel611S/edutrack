@@ -1,32 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-// Mock user data - In production, query the database
-const mockUsers: Record<string, Record<string, any>> = {
-  admin: {
-    "02511793": {
-      id: "admin_001",
-      name: "System Administrator",
-      userId: "02511793",
-      password: "12345678",
-    },
-  },
-  teacher: {
-    "12511793": {
-      id: "teacher_001",
-      name: "Teacher Account",
-      userId: "12511793",
-      password: "12345678",
-    },
-  },
-  student: {
-    "22511793": {
-      id: "student_001",
-      name: "Student Account",
-      userId: "22511793",
-      password: "12345678",
-    },
-  },
-}
+import { getDb } from "@/lib/db"
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,13 +15,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "ID and role mismatch" }, { status: 400 })
     }
 
-    const users = mockUsers[validatedRole as keyof typeof mockUsers]
-    if (!users) {
-      return NextResponse.json({ message: "Invalid role" }, { status: 400 })
-    }
+    const db = getDb()
 
-    const user = users[id]
-    if (!user || user.password !== password) {
+    const user = getUserFromDb(db, validatedRole, id)
+    if (!user || user.password_hash !== password) {
       return NextResponse.json({ message: "Invalid ID or password" }, { status: 401 })
     }
 
@@ -57,8 +27,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       token,
-      userId: user.userId,
-      userName: user.name,
+      userId: user.id,
+      userName: user.full_name,
       role: validatedRole,
       success: true,
     })
@@ -73,4 +43,32 @@ function validateRoleFromId(id: string, role: string): string | null {
   if (id.startsWith("12") && role === "teacher") return "teacher"
   if (id.startsWith("22") && role === "student") return "student"
   return null
+}
+
+function getUserFromDb(
+  db: ReturnType<typeof getDb>,
+  role: "admin" | "teacher" | "student",
+  id: string,
+): { id: string; full_name: string; password_hash: string } | null {
+  if (role === "admin") {
+    return (
+      db
+        .prepare("SELECT id, full_name, password_hash FROM admins WHERE id = ? LIMIT 1")
+        .get(id) ?? null
+    )
+  }
+
+  if (role === "teacher") {
+    return (
+      db
+        .prepare("SELECT id, full_name, password_hash FROM teachers WHERE id = ? LIMIT 1")
+        .get(id) ?? null
+    )
+  }
+
+  return (
+    db
+      .prepare("SELECT id, full_name, password_hash FROM students WHERE id = ? LIMIT 1")
+      .get(id) ?? null
+  )
 }

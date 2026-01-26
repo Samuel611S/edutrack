@@ -1,4 +1,8 @@
--- Create Admins table
+PRAGMA foreign_keys = ON;
+
+-- =====================
+-- ADMINS
+-- =====================
 CREATE TABLE IF NOT EXISTS admins (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
@@ -9,7 +13,9 @@ CREATE TABLE IF NOT EXISTS admins (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Teachers table
+-- =====================
+-- TEACHERS
+-- =====================
 CREATE TABLE IF NOT EXISTS teachers (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
@@ -22,7 +28,9 @@ CREATE TABLE IF NOT EXISTS teachers (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Students table
+-- =====================
+-- STUDENTS
+-- =====================
 CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
@@ -36,7 +44,9 @@ CREATE TABLE IF NOT EXISTS students (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create Courses table
+-- =====================
+-- COURSES
+-- =====================
 CREATE TABLE IF NOT EXISTS courses (
   id TEXT PRIMARY KEY,
   course_code TEXT UNIQUE NOT NULL,
@@ -50,7 +60,9 @@ CREATE TABLE IF NOT EXISTS courses (
   FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
 );
 
--- Create Course Enrollment table
+-- =====================
+-- COURSE ENROLLMENTS
+-- =====================
 CREATE TABLE IF NOT EXISTS course_enrollments (
   id TEXT PRIMARY KEY,
   course_id TEXT NOT NULL,
@@ -62,7 +74,9 @@ CREATE TABLE IF NOT EXISTS course_enrollments (
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 );
 
--- Create Lectures table
+-- =====================
+-- LECTURES
+-- =====================
 CREATE TABLE IF NOT EXISTS lectures (
   id TEXT PRIMARY KEY,
   course_id TEXT NOT NULL,
@@ -70,13 +84,15 @@ CREATE TABLE IF NOT EXISTS lectures (
   start_time TIME,
   end_time TIME,
   location TEXT,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
+  latitude DECIMAL(10,8),
+  longitude DECIMAL(11,8),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
 
--- Create Attendance table
+-- =====================
+-- ATTENDANCE
+-- =====================
 CREATE TABLE IF NOT EXISTS attendance (
   id TEXT PRIMARY KEY,
   lecture_id TEXT NOT NULL,
@@ -84,9 +100,9 @@ CREATE TABLE IF NOT EXISTS attendance (
   check_in_time TIMESTAMP,
   check_out_time TIMESTAMP,
   location_verified BOOLEAN DEFAULT FALSE,
-  student_latitude DECIMAL(10, 8),
-  student_longitude DECIMAL(11, 8),
-  distance_from_lecture DECIMAL(10, 2),
+  student_latitude DECIMAL(10,8),
+  student_longitude DECIMAL(11,8),
+  distance_from_lecture DECIMAL(10,2),
   status TEXT DEFAULT 'absent',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(lecture_id, student_id),
@@ -94,7 +110,9 @@ CREATE TABLE IF NOT EXISTS attendance (
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
 );
 
--- Create Lecture Materials table
+-- =====================
+-- LECTURE MATERIALS
+-- =====================
 CREATE TABLE IF NOT EXISTS lecture_materials (
   id TEXT PRIMARY KEY,
   lecture_id TEXT NOT NULL,
@@ -106,13 +124,15 @@ CREATE TABLE IF NOT EXISTS lecture_materials (
   FOREIGN KEY (lecture_id) REFERENCES lectures(id) ON DELETE CASCADE
 );
 
--- Create indexes for performance
-CREATE INDEX idx_teachers_university_id ON teachers(university_id);
-CREATE INDEX idx_students_university_id ON students(university_id);
-CREATE INDEX idx_courses_teacher_id ON courses(teacher_id);
-CREATE INDEX idx_courses_university_id ON courses(university_id);
-CREATE INDEX idx_enrollments_student_id ON course_enrollments(student_id);
-CREATE INDEX idx_enrollments_course_id ON course_enrollments(course_id);
-CREATE INDEX idx_lectures_course_id ON lectures(course_id);
-CREATE INDEX idx_attendance_lecture_id ON attendance(lecture_id);
-CREATE INDEX idx_attendance_student_id ON attendance(student_id);
+-- =====================
+-- INDEXES
+-- =====================
+CREATE INDEX IF NOT EXISTS idx_teachers_university_id ON teachers(university_id);
+CREATE INDEX IF NOT EXISTS idx_students_university_id ON students(university_id);
+CREATE INDEX IF NOT EXISTS idx_courses_teacher_id ON courses(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_courses_university_id ON courses(university_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON course_enrollments(student_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_course_id ON course_enrollments(course_id);
+CREATE INDEX IF NOT EXISTS idx_lectures_course_id ON lectures(course_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_lecture_id ON attendance(lecture_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance(student_id);

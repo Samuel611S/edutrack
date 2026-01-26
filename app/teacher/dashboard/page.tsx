@@ -35,7 +35,7 @@ export default function TeacherDashboard() {
 
   const handleLogout = () => {
     logout()
-    router.push("/")
+    router.push("/login")
   }
 
   const mockCourses: Course[] = [
