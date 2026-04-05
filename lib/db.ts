@@ -1,11 +1,17 @@
 import Database from "better-sqlite3"
 import path from "node:path"
+import os from "node:os"
 import { existsSync, mkdirSync, readFileSync } from "node:fs"
 
 let _db: Database.Database | null = null
 
 function getDbPath() {
-  return process.env.DATABASE_PATH ?? path.join(process.cwd(), "scripts", "university.db")
+  if (process.env.DATABASE_PATH) return process.env.DATABASE_PATH
+  // Vercel serverless: only / tmp is writable; bundled dirs are read-only (SQLite + WAL fails there).
+  if (process.env.VERCEL) {
+    return path.join(os.tmpdir(), "edutrack-university.db")
+  }
+  return path.join(process.cwd(), "scripts", "university.db")
 }
 
 function tableExists(db: Database.Database, name: string) {
