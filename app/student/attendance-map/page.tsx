@@ -1,10 +1,9 @@
 "use client"
 
-import { useAuth } from "@/lib/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { CheckCircle, AlertCircle, Loader2, Navigation } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { FaceAuthentication } from "@/components/face-authentication"
@@ -17,16 +16,17 @@ interface AttendanceLocation {
 
 interface LectureInfo {
   id: string
-  course: string
-  courseCode: string
-  time: string
+  course_name: string
+  course_code: string
+  start_time: string
+  end_time: string
   location: string
-  roomNumber: string
-  building: string
-  section: string
   lectureLatitude: number
   lectureLongitude: number
   allowedRadius: number
+  building: string
+  roomNumber: string
+  section: string
 }
 
 declare global {
@@ -36,61 +36,24 @@ declare global {
 }
 
 export default function AttendanceMapPage() {
-  const { user, logout } = useAuth()
   const router = useRouter()
   const mapRef = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<any>(null)
   const [loading, setLoading] = useState(false)
+  const [lectureLoading, setLectureLoading] = useState(true)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [location, setLocation] = useState<AttendanceLocation | null>(null)
   const [distance, setDistance] = useState<number | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const [mapKeyMissing, setMapKeyMissing] = useState(false)
   const [showFaceAuth, setShowFaceAuth] = useState(false)
   const [faceAuthType, setFaceAuthType] = useState<"start" | "end">("start")
-  const [faceAuthComplete, setFaceAuthComplete] = useState(false)
+  const [startFaceDone, setStartFaceDone] = useState(false)
+  const [endFaceDone, setEndFaceDone] = useState(false)
   const [timeInSection, setTimeInSection] = useState(0)
   const [checkInTime, setCheckInTime] = useState<Date | null>(null)
-
-  const currentLecture: LectureInfo = {
-    id: "lecture_001",
-    course: "Advanced Database Systems",
-    courseCode: "CS301",
-    time: "10:00 AM - 11:30 AM",
-    location: "Building A, Room 201",
-    building: "Building A",
-    roomNumber: "201",
-    section: "Section A",
-    lectureLatitude: 30.0553,
-    lectureLongitude: 31.3399,
-    allowedRadius: 50,
-  }
-
-  useEffect(() => {
-    const script = document.createElement("script")
-    script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY`
-    script.async = true
-    script.defer = true
-    script.onload = () => {
-      setMapLoaded(true)
-    }
-    document.head.appendChild(script)
-
-    return () => {
-      document.head.removeChild(script)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!checkInTime) return
-
-    const timer = setInterval(() => {
-      const elapsed = Math.floor((new Date().getTime() - checkInTime.getTime()) / 1000)
-      setTimeInSection(elapsed)
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [checkInTime])
+  const [currentLecture, setCurrentLecture] = useState<LectureInfo | null>(null)
 
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371e3
@@ -105,7 +68,111 @@ export default function AttendanceMapPage() {
     return R * c
   }
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch("/api/student/lectures/current", { credentials: "include" })
+        const data = await res.json()
+        if (cancelled) return
+        if (!res.ok || !data.lecture) {
+          setError(data.message || "No lecture available.")
+          setCurrentLecture(null)
+        } else {
+          const L = data.lecture
+          const loc = String(L.location || "")
+          const roomMatch = loc.match(/Room\s*(\d+)/i)
+          const bldgMatch = loc.match(/Building\s*([A-Z0-9]+)/i)
+          setCurrentLecture({
+            id: L.id,
+            course_name: L.course_name,
+            course_code: L.course_code,
+            start_time: L.start_time || "",
+            end_time: L.end_time || "",
+            location: loc,
+            lectureLatitude: Number(L.latitude),
+            lectureLongitude: Number(L.longitude),
+            allowedRadius: Number(L.allowed_radius_m ?? 100),
+            building: bldgMatch ? `Building ${bldgMatch[1]}` : "Campus",
+            roomNumber: roomMatch ? roomMatch[1] : "—",
+            section: "Section A",
+          })
+        }
+      } catch {
+        if (!cancelled) setError("Could not load lecture.")
+      } finally {
+        if (!cancelled) setLectureLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (!key) {
+      setMapKeyMissing(true)
+      return
+    }
+    const script = document.createElement("script")
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`
+    script.async = true
+    script.defer = true
+    script.onload = () => setMapLoaded(true)
+    document.head.appendChild(script)
+
+    return () => {
+      if (script.parentNode) script.parentNode.removeChild(script)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current || map || !currentLecture || mapKeyMissing) return
+    const centerLat = currentLecture.lectureLatitude
+    const centerLng = currentLecture.lectureLongitude
+
+    const googleMap = new window.google.maps.Map(mapRef.current, {
+      zoom: 16,
+      center: { lat: centerLat, lng: centerLng },
+      mapTypeControl: true,
+      streetViewControl: true,
+    })
+
+    new window.google.maps.Marker({
+      position: { lat: centerLat, lng: centerLng },
+      map: googleMap,
+      title: currentLecture.location,
+      icon: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+    })
+
+    new window.google.maps.Circle({
+      center: { lat: centerLat, lng: centerLng },
+      map: googleMap,
+      radius: currentLecture.allowedRadius,
+      fillColor: "#3b82f6",
+      fillOpacity: 0.12,
+      strokeColor: "#2563eb",
+      strokeOpacity: 0.5,
+      strokeWeight: 1,
+    })
+
+    setMap(googleMap)
+  }, [mapLoaded, map, currentLecture, mapKeyMissing])
+
+  useEffect(() => {
+    if (!checkInTime) return
+
+    const timer = setInterval(() => {
+      const elapsed = Math.floor((new Date().getTime() - checkInTime.getTime()) / 1000)
+      setTimeInSection(elapsed)
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [checkInTime])
+
   const getLocation = () => {
+    if (!currentLecture) return
     setError("")
     setSuccess("")
     setLoading(true)
@@ -123,19 +190,19 @@ export default function AttendanceMapPage() {
         setLocation(userLocation)
 
         if (map) {
-          const userMarker = new window.google.maps.Marker({
+          new window.google.maps.Marker({
             position: { lat: latitude, lng: longitude },
-            map: map,
+            map,
             title: "Your Location",
             icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
           })
 
           new window.google.maps.Circle({
             center: { lat: latitude, lng: longitude },
-            map: map,
+            map,
             radius: accuracy,
             fillColor: "#ef4444",
-            fillOpacity: 0.1,
+            fillOpacity: 0.08,
             strokeColor: "#ef4444",
             strokeOpacity: 0.3,
             strokeWeight: 1,
@@ -143,7 +210,9 @@ export default function AttendanceMapPage() {
 
           const bounds = new window.google.maps.LatLngBounds()
           bounds.extend(new window.google.maps.LatLng(latitude, longitude))
-          bounds.extend(new window.google.maps.LatLng(currentLecture.lectureLatitude, currentLecture.lectureLongitude))
+          bounds.extend(
+            new window.google.maps.LatLng(currentLecture.lectureLatitude, currentLecture.lectureLongitude),
+          )
           map.fitBounds(bounds)
         }
 
@@ -157,87 +226,116 @@ export default function AttendanceMapPage() {
         setLoading(false)
       },
       (err) => {
-        console.error("[v0] Geolocation error:", err)
+        console.error("[EduTrack] Geolocation error:", err)
         setError("Unable to access your location. Please enable location services.")
         setLoading(false)
       },
     )
   }
 
-  const handleFaceAuthSuccess = (faceData: { timestamp: string; captured: boolean }) => {
-    setFaceAuthComplete(true)
+  const submitAttendance = useCallback(
+    async (timeSec?: number) => {
+      if (!currentLecture || !location) return
+      const sec = timeSec ?? timeInSection
+      setLoading(true)
+      setError("")
+      try {
+        const response = await fetch("/api/attendance/mark", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            lectureId: currentLecture.id,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            faceVerified: true,
+            timeInSection: sec,
+          }),
+        })
+        const data = await response.json()
+        if (!response.ok) {
+          setError(data.message || "Failed to mark attendance")
+          return
+        }
+        setSuccess("Attendance marked successfully!")
+        setTimeout(() => router.push("/student/dashboard"), 2000)
+      } catch {
+        setError("An error occurred while marking attendance")
+      } finally {
+        setLoading(false)
+      }
+    },
+    [currentLecture, location, router, timeInSection],
+  )
+
+  const handleFaceAuthSuccess = () => {
     setShowFaceAuth(false)
 
     if (faceAuthType === "start") {
+      setStartFaceDone(true)
       setCheckInTime(new Date())
-      setSuccess(`Face verified at lecture start. Time tracking started.`)
-    } else {
-      if (timeInSection < 300) {
-        setError(`You must stay for at least 5 minutes. Current time: ${Math.floor(timeInSection / 60)}m`)
-        setFaceAuthComplete(false)
-        return
-      }
-      setSuccess(`Lecture attendance verified! Total duration: ${Math.floor(timeInSection / 60)}m`)
+      setFaceAuthType("end")
+      setSuccess("Face verified at lecture start. Time tracking started.")
+      return
     }
+
+    const elapsed = checkInTime ? Math.floor((Date.now() - checkInTime.getTime()) / 1000) : timeInSection
+    if (elapsed < 300) {
+      setError(`You must stay for at least 5 minutes. Current time: ${Math.floor(elapsed / 60)}m`)
+      return
+    }
+    setEndFaceDone(true)
+    setSuccess(`Lecture attendance verified! Total duration: ${Math.floor(elapsed / 60)}m`)
+    void submitAttendance(elapsed)
   }
 
-  const markAttendance = async () => {
-    if (!location) {
+  const markAttendance = () => {
+    if (!currentLecture || !location) {
       setError("Location not available")
       return
     }
 
     if (!distance || distance > currentLecture.allowedRadius) {
       setError(
-        `You are ${distance ? distance + "m" : "too far"} from the lecture location. Must be within ${currentLecture.allowedRadius}m of ${currentLecture.section}`,
+        `You are ${distance ? distance + "m" : "too far"} from the lecture location. Must be within ${currentLecture.allowedRadius}m.`,
       )
       return
     }
 
-    if (!faceAuthComplete || faceAuthType === "start") {
-      setShowFaceAuth(true)
+    if (!startFaceDone) {
       setFaceAuthType("start")
+      setShowFaceAuth(true)
       return
     }
 
-    setLoading(true)
-
-    try {
-      const response = await fetch("/api/attendance/mark", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lectureId: currentLecture.id,
-          studentId: user?.id,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          distance: distance,
-          timeInSection: timeInSection,
-          building: currentLecture.building,
-          roomNumber: currentLecture.roomNumber,
-          section: currentLecture.section,
-          faceVerified: faceAuthComplete,
-          timestamp: new Date().toISOString(),
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.message || "Failed to mark attendance")
-        return
-      }
-
-      setSuccess("Attendance marked successfully!")
-      setTimeout(() => {
-        router.push("/student/dashboard")
-      }, 2000)
-    } catch (err) {
-      console.error("[v0] Attendance error:", err)
-      setError("An error occurred while marking attendance")
-    } finally {
-      setLoading(false)
+    if (!endFaceDone) {
+      setFaceAuthType("end")
+      setShowFaceAuth(true)
+      return
     }
+  }
+
+  if (!currentLecture && !lectureLoading) {
+    return (
+      <ProtectedRoute allowedRoles={["student"]}>
+        <main className="min-h-screen p-8">
+          <p className="text-gray-700">{error || "No lecture."}</p>
+          <Button className="mt-4" onClick={() => router.push("/student/dashboard")}>
+            Back
+          </Button>
+        </main>
+      </ProtectedRoute>
+    )
+  }
+
+  if (!currentLecture) {
+    return (
+      <ProtectedRoute allowedRoles={["student"]}>
+        <main className="min-h-screen flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+        </main>
+      </ProtectedRoute>
+    )
   }
 
   return (
@@ -248,7 +346,7 @@ export default function AttendanceMapPage() {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Mark Attendance - Map View</h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm">
-                {currentLecture.building}, {currentLecture.section}
+                {currentLecture.building}, Room {currentLecture.roomNumber}
               </p>
             </div>
             <Button onClick={() => router.push("/student/dashboard")} variant="outline" size="sm">
@@ -258,13 +356,22 @@ export default function AttendanceMapPage() {
         </header>
 
         <div className="max-w-6xl mx-auto px-4 py-8">
+          {mapKeyMissing && (
+            <div className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              Set <code className="font-mono">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code> in <code>.env.local</code> to
+              enable the map.
+            </div>
+          )}
+
           {showFaceAuth && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
               <div className="w-full max-w-2xl max-h-[90vh] overflow-auto">
                 <FaceAuthentication
                   type={faceAuthType}
                   lectureId={currentLecture.id}
-                  onSuccess={handleFaceAuthSuccess}
+                  onSuccess={() => {
+                    handleFaceAuthSuccess()
+                  }}
                   onError={(err) => setError(err)}
                 />
               </div>
@@ -274,7 +381,7 @@ export default function AttendanceMapPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 h-full overflow-hidden">
-                <div ref={mapRef} style={{ width: "100%", height: "500px" }} className="rounded-lg" />
+                <div ref={mapRef} style={{ width: "100%", height: "500px" }} className="rounded-lg bg-slate-100" />
               </Card>
 
               <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 mt-4">
@@ -312,16 +419,14 @@ export default function AttendanceMapPage() {
                 <CardContent className="space-y-3">
                   <div>
                     <p className="text-gray-600 dark:text-gray-400 text-xs">Course</p>
-                    <p className="text-gray-900 dark:text-white font-semibold">{currentLecture.course}</p>
-                    <p className="text-gray-500 dark:text-gray-500 text-xs">{currentLecture.courseCode}</p>
+                    <p className="text-gray-900 dark:text-white font-semibold">{currentLecture.course_name}</p>
+                    <p className="text-gray-500 dark:text-gray-500 text-xs">{currentLecture.course_code}</p>
                   </div>
                   <div>
                     <p className="text-gray-600 dark:text-gray-400 text-xs">Time</p>
-                    <p className="text-gray-900 dark:text-white font-semibold">{currentLecture.time}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 text-xs">Section</p>
-                    <p className="text-gray-900 dark:text-white font-semibold">{currentLecture.section}</p>
+                    <p className="text-gray-900 dark:text-white font-semibold">
+                      {[currentLecture.start_time, currentLecture.end_time].filter(Boolean).join(" - ") || "—"}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -333,7 +438,7 @@ export default function AttendanceMapPage() {
                     <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                       {Math.floor(timeInSection / 60)}m {timeInSection % 60}s
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">Minimum 5 minutes required</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">Minimum 5 minutes required for checkout</p>
                   </CardContent>
                 </Card>
               )}
@@ -371,17 +476,6 @@ export default function AttendanceMapPage() {
                     >
                       {distance}m
                     </p>
-                    <p
-                      className={`text-xs mt-2 ${
-                        distance <= currentLecture.allowedRadius
-                          ? "text-emerald-700 dark:text-emerald-300"
-                          : "text-red-700 dark:text-red-300"
-                      }`}
-                    >
-                      {distance <= currentLecture.allowedRadius
-                        ? "Within allowed section"
-                        : `${distance - currentLecture.allowedRadius}m outside allowed section`}
-                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -410,15 +504,20 @@ export default function AttendanceMapPage() {
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Processing...
                   </>
-                ) : faceAuthComplete && faceAuthType === "end" ? (
+                ) : !startFaceDone ? (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Complete Attendance
+                    Start verification (face + location)
+                  </>
+                ) : !endFaceDone ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    End verification (min 5 min)
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    {faceAuthType === "start" ? "Start Lecture" : "End Lecture"}
+                    Done
                   </>
                 )}
               </Button>

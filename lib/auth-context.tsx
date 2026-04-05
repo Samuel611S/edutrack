@@ -13,8 +13,8 @@ interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (params: { token: string; role: "admin" | "teacher" | "student"; userId: string; userName: string }) => void
-  logout: () => void
+  login: (params: { role: "admin" | "teacher" | "student"; userId: string; userName: string }) => void
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,18 +24,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Always require login on a fresh visit/refresh (no persisted auth).
-    // Also clear any old persisted data so it can't "remember" previous users.
-    localStorage.removeItem("authToken")
-    localStorage.removeItem("userRole")
-    localStorage.removeItem("userId")
-    localStorage.removeItem("userName")
-
-    setIsLoading(false)
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" })
+        const data = await res.json()
+        if (cancelled) return
+        if (data.authenticated && data.user) {
+          setUser({
+            id: data.user.id,
+            name: data.user.name,
+            role: data.user.role,
+            email: "",
+          })
+        } else {
+          setUser(null)
+        }
+      } catch {
+        if (!cancelled) setUser(null)
+      } finally {
+        if (!cancelled) setIsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
-  const login: AuthContextType["login"] = ({ token, role, userId, userName }) => {
-    // Intentionally NOT persisted: we keep auth in-memory only for this session/runtime.
+  const login: AuthContextType["login"] = ({ role, userId, userName }) => {
     setUser({
       id: userId,
       name: userName,
@@ -44,8 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }
 
-  const logout = () => {
-    setUser(null)
+  const logout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+    } finally {
+      setUser(null)
+    }
   }
 
   return (

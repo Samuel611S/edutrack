@@ -56,15 +56,17 @@ export function CampusMapView() {
 
   // Load Google Maps
   useEffect(() => {
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    if (!key) return
     const script = document.createElement("script")
-    script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}`
     script.async = true
     script.defer = true
     script.onload = () => setMapLoaded(true)
     document.head.appendChild(script)
 
     return () => {
-      document.head.removeChild(script)
+      if (script.parentNode) script.parentNode.removeChild(script)
     }
   }, [])
 
@@ -81,18 +83,9 @@ export function CampusMapView() {
         streetViewControl: true,
       })
 
-      // Add markers for campus locations
       campusLocations.forEach((location) => {
         const iconColor = location.type === "building" ? "blue" : location.type === "parking" ? "yellow" : "red"
 
-        new window.google.maps.Marker({
-          position: { lat: location.latitude, lng: location.longitude },
-          map: googleMap,
-          title: location.name,
-          icon: `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`,
-        })
-
-        // Add info window
         const infoWindow = new window.google.maps.InfoWindow({
           content: `<div class="bg-white p-2 rounded"><strong>${location.name}</strong><br/>${location.type}</div>`,
         })
@@ -100,6 +93,8 @@ export function CampusMapView() {
         const marker = new window.google.maps.Marker({
           position: { lat: location.latitude, lng: location.longitude },
           map: googleMap,
+          title: location.name,
+          icon: `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`,
         })
 
         marker.addListener("click", () => {
@@ -118,7 +113,12 @@ export function CampusMapView() {
         <CardDescription className="text-slate-400">Arab Open University Cairo - All lecture locations</CardDescription>
       </CardHeader>
       <CardContent>
-        <div ref={mapRef} style={{ width: "100%", height: "400px" }} className="rounded-lg" />
+        {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+          <p className="text-slate-400 text-sm mb-2">
+            Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to .env.local to load the map.
+          </p>
+        )}
+        <div ref={mapRef} style={{ width: "100%", height: "400px" }} className="rounded-lg bg-slate-900/50" />
       </CardContent>
     </Card>
   )

@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS lectures (
   location TEXT,
   latitude DECIMAL(10,8),
   longitude DECIMAL(11,8),
+  allowed_radius_m INTEGER DEFAULT 100,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
@@ -103,6 +104,8 @@ CREATE TABLE IF NOT EXISTS attendance (
   student_latitude DECIMAL(10,8),
   student_longitude DECIMAL(11,8),
   distance_from_lecture DECIMAL(10,2),
+  face_verified INTEGER DEFAULT 0,
+  time_in_section_sec INTEGER,
   status TEXT DEFAULT 'absent',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(lecture_id, student_id),

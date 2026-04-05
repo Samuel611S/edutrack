@@ -43,6 +43,7 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ id, password, role }),
       })
 
@@ -55,8 +56,7 @@ export default function LoginPage() {
 
       // Store session info via auth context
       login({
-        token: data.token,
-        role,
+        role: role as "admin" | "teacher" | "student",
         userId: data.userId,
         userName: data.userName,
       })
@@ -148,7 +148,7 @@ export default function LoginPage() {
         </Card>
 
         {/* Footer */}
-        <p className="text-gray-500 text-xs text-center mt-6">© 2025 EduTrack+. All rights reserved.</p>
+        <p className="text-gray-500 text-xs text-center mt-6">© 2026 EduTrack+. All rights reserved.</p>
       </div>
     </main>
   )
