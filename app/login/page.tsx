@@ -76,118 +76,125 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden flex items-center justify-center p-4">
-      {/* Animated atmosphere */}
-      <div className="absolute inset-0 bg-[#0b1020]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_70%_at_50%_-10%,rgba(99,102,241,0.35),transparent_55%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_0%_100%,rgba(56,189,248,0.2),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_100%_80%,rgba(192,132,252,0.18),transparent_45%)]" />
-
-      <div
-        className="pointer-events-none absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-indigo-500/25 blur-[100px] edu-login-blob-1"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -bottom-40 -right-20 h-[32rem] w-[32rem] rounded-full bg-fuchsia-500/20 blur-[110px] edu-login-blob-2"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute top-1/2 left-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[90px] edu-login-blob-3"
-        aria-hidden
-      />
-
-      <div className="relative z-10 w-full max-w-md">
-        <div className="text-center mb-8 edu-login-title">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-[0_0_40px_-12px_rgba(99,102,241,0.6)] backdrop-blur-md transition-transform duration-300 hover:scale-[1.03]">
-            <GraduationCap className="h-8 w-8 text-indigo-200" strokeWidth={1.5} />
+    <div className="flex min-h-screen flex-col edu-dashboard-bg">
+      {/* Top bar — same language as dashboard headers */}
+      <header className="edu-dashboard-header sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-md shadow-sm shadow-indigo-950/5">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50/90 shadow-sm shadow-indigo-950/5">
+              <GraduationCap className="h-6 w-6 text-indigo-600" strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className="font-libre text-[11px] font-normal uppercase tracking-[0.2em] text-indigo-600/90">
+                EduTrack+
+              </p>
+              <p className="text-base font-semibold text-gray-900">Campus portal</p>
+            </div>
           </div>
-          <p className="font-libre text-xs font-normal uppercase tracking-[0.35em] text-slate-400 mb-2">EduTrack+</p>
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-[2.35rem]">
-            <span className="bg-gradient-to-r from-sky-200 via-indigo-200 to-violet-200 bg-clip-text text-transparent">
-              Smart Campus
-            </span>
-          </h1>
-          <p className="mt-3 text-slate-400 text-sm flex items-center justify-center gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-amber-300/90" />
-            Attendance &amp; academic management
-          </p>
+          <div className="hidden items-center gap-2 text-sm text-slate-500 sm:flex">
+            <Sparkles className="h-4 w-4 text-amber-500/90" />
+            <span>Attendance &amp; academics</span>
+          </div>
         </div>
+      </header>
 
-        <div className="edu-login-sub">
-          <Card className="edu-login-card border-white/10 bg-white/[0.07] shadow-2xl shadow-indigo-950/40 backdrop-blur-xl">
-            <CardHeader className="pb-4 space-y-1">
-              <CardTitle className="text-xl text-white">Sign in</CardTitle>
-              <CardDescription className="text-slate-400">Use your university ID and password</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {error && (
-                <Alert
-                  variant="destructive"
-                  className="mb-4 border-red-400/30 bg-red-500/10 text-red-100 [&>svg]:text-red-300"
-                >
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+      <main className="relative flex flex-1 flex-col items-center justify-center px-4 py-10">
+        {/* Soft accents — same family as dashboard (light, not dark blobs) */}
+        <div
+          className="pointer-events-none absolute right-[10%] top-[18%] h-64 w-64 rounded-full bg-indigo-300/20 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute bottom-[12%] left-[8%] h-72 w-72 rounded-full bg-violet-300/15 blur-3xl"
+          aria-hidden
+        />
 
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="id" className="text-slate-200">
-                    University ID
-                  </Label>
-                  <Input
-                    id="id"
-                    type="text"
-                    placeholder="e.g. 22511793"
-                    value={id}
-                    onChange={(e) => setId(e.target.value)}
-                    className="h-11 border-white/15 bg-white/5 text-white placeholder:text-slate-500 focus-visible:border-indigo-400/60 focus-visible:ring-indigo-400/25 transition-shadow duration-200"
-                    required
-                  />
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    Admin 02… · Teacher 12… · Student 22…
-                  </p>
-                </div>
+        <div className="relative z-10 w-full max-w-md edu-dashboard-enter">
+          <div className="mb-8 text-center edu-login-title">
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+              <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
+                Welcome back
+              </span>
+            </h1>
+            <p className="mt-2 text-sm text-slate-600">Sign in to open your dashboard</p>
+          </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="password" className="text-slate-200">
-                    Password
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="h-11 border-white/15 bg-white/5 text-white placeholder:text-slate-500 focus-visible:border-indigo-400/60 focus-visible:ring-indigo-400/25 transition-shadow duration-200"
-                    required
-                  />
-                  <p className="text-[11px] text-slate-500">Demo password shown in course materials: 12345678</p>
-                </div>
+          <div className="edu-login-sub">
+            <Card className="edu-login-card border-white/80 bg-white/90 shadow-md shadow-indigo-950/5 backdrop-blur-sm">
+              <CardHeader className="space-y-1 pb-4">
+                <CardTitle className="text-xl text-gray-900">Sign in</CardTitle>
+                <CardDescription className="text-slate-600">Use your university ID and password</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {error && (
+                  <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-800">{error}</AlertDescription>
+                  </Alert>
+                )}
 
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="edu-login-btn-shimmer mt-2 h-11 w-full border-0 text-white font-semibold shadow-lg shadow-indigo-900/40 transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
-                >
-                  {isLoading ? (
-                    <span className="inline-flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                      Signing in…
-                    </span>
-                  ) : (
-                    "Enter dashboard"
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="id" className="text-gray-700">
+                      University ID
+                    </Label>
+                    <Input
+                      id="id"
+                      type="text"
+                      placeholder="Enter your ID"
+                      value={id}
+                      onChange={(e) => setId(e.target.value)}
+                      className="h-11 border-gray-200 bg-gray-50/80 text-gray-900 placeholder:text-gray-400 focus-visible:border-indigo-400 focus-visible:ring-indigo-400/20"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="password" className="text-gray-700">
+                      Password
+                    </Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="h-11 border-gray-200 bg-gray-50/80 text-gray-900 placeholder:text-gray-400 focus-visible:border-indigo-400 focus-visible:ring-indigo-400/20"
+                      required
+                    />
+                    <p className="text-xs text-slate-500">Demo: 12345678</p>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="mt-2 h-11 w-full bg-indigo-600 font-semibold text-white shadow-md shadow-indigo-950/15 transition-all hover:bg-indigo-700 hover:shadow-lg disabled:opacity-60"
+                  >
+                    {isLoading ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                        Signing in…
+                      </span>
+                    ) : (
+                      "Enter dashboard"
+                    )}
+                  </Button>
+                </form>
+
+                <p className="mt-6 text-center text-xs text-slate-500 leading-relaxed">
+                  Admin: <span className="font-mono text-slate-700">02511793</span>
+                  {" · "}
+                  Teacher: <span className="font-mono text-slate-700">12511793</span>
+                  {" · "}
+                  Student: <span className="font-mono text-slate-700">22511793</span>
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <p className="mt-8 text-center text-[11px] text-slate-500">© 2026 EduTrack+</p>
         </div>
-
-        <p className="text-center text-[11px] text-slate-500 mt-8 edu-login-sub">
-          © 2026 EduTrack+
-        </p>
-      </div>
-    </main>
+      </main>
+    </div>
   )
 }
