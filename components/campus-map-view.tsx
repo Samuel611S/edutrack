@@ -22,7 +22,7 @@ export function CampusMapView() {
   const [map, setMap] = useState<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
 
-  // Arab Open University Cairo locations
+  // Demo campus marker locations (EduTrack+)
   const campusLocations: CampusLocation[] = [
     {
       id: "bldg_a",
@@ -110,7 +110,7 @@ export function CampusMapView() {
     <Card className="bg-slate-800 border-slate-700">
       <CardHeader>
         <CardTitle className="text-white">Campus Map</CardTitle>
-        <CardDescription className="text-slate-400">Arab Open University Cairo - All lecture locations</CardDescription>
+        <CardDescription className="text-slate-400">EduTrack+ — campus map and lecture locations</CardDescription>
       </CardHeader>
       <CardContent>
         {!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (

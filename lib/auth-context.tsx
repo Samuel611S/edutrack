@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { WelcomeSplash } from "@/components/welcome-splash"
 
 interface User {
   id: string
@@ -8,6 +9,8 @@ interface User {
   role: "admin" | "teacher" | "student"
   email: string
 }
+
+type SplashPhase = "splash" | "exit" | "done"
 
 interface AuthContextType {
   user: User | null
@@ -19,33 +22,51 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const MIN_SPLASH_MS = 1400
+const EXIT_ANIM_MS = 520
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [splashPhase, setSplashPhase] = useState<SplashPhase>("splash")
 
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const res = await fetch("/api/auth/me", { credentials: "include" })
-        const data = await res.json()
-        if (cancelled) return
-        if (data.authenticated && data.user) {
-          setUser({
-            id: data.user.id,
-            name: data.user.name,
-            role: data.user.role,
-            email: "",
-          })
-        } else {
-          setUser(null)
-        }
-      } catch {
-        if (!cancelled) setUser(null)
-      } finally {
-        if (!cancelled) setIsLoading(false)
+    const run = async () => {
+      let authResult: { authenticated: boolean; user?: { id: string; name: string; role: User["role"] } } = {
+        authenticated: false,
       }
-    })()
+
+      await Promise.all([
+        new Promise<void>((resolve) => setTimeout(resolve, MIN_SPLASH_MS)),
+        (async () => {
+          try {
+            const res = await fetch("/api/auth/me", { credentials: "include" })
+            authResult = await res.json()
+          } catch {
+            authResult = { authenticated: false }
+          }
+        })(),
+      ])
+
+      if (cancelled) return
+
+      if (authResult.authenticated && authResult.user) {
+        setUser({
+          id: authResult.user.id,
+          name: authResult.user.name,
+          role: authResult.user.role,
+          email: "",
+        })
+      } else {
+        setUser(null)
+      }
+
+      setSplashPhase("exit")
+      await new Promise((r) => setTimeout(r, EXIT_ANIM_MS))
+      if (!cancelled) setSplashPhase("done")
+    }
+
+    void run()
     return () => {
       cancelled = true
     }
@@ -68,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const isLoading = splashPhase !== "done"
+  const showSplashOverlay = splashPhase === "splash" || splashPhase === "exit"
+
   return (
     <AuthContext.Provider
       value={{
@@ -78,7 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
       }}
     >
-      {children}
+      <div className={showSplashOverlay ? "min-h-screen" : undefined} aria-busy={showSplashOverlay}>
+        {children}
+      </div>
+      {showSplashOverlay && <WelcomeSplash phase={splashPhase === "exit" ? "exit" : "splash"} />}
     </AuthContext.Provider>
   )
 }

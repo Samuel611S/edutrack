@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
+import { DashboardEntrance } from "@/components/dashboard-entrance"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, BookOpen, BarChart3, LogOut, Settings, FileText, TrendingUp, Clock } from "lucide-react"
@@ -40,9 +41,10 @@ export default function AdminDashboard() {
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <DashboardEntrance>
+        <main className="min-h-screen edu-dashboard-bg-admin">
+          <header className="edu-dashboard-header sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-md shadow-sm shadow-indigo-950/5">
+            <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">EduTrack+ Admin</h1>
             </div>
@@ -61,16 +63,16 @@ export default function AdminDashboard() {
                 Logout
               </Button>
             </div>
-          </div>
-        </header>
+            </div>
+          </header>
 
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {loading && <p className="text-gray-600">Loading…</p>}
+          <div className="max-w-7xl mx-auto px-4 py-8 edu-tabs-enter">
+          {loading && <p className="text-slate-600 text-sm animate-pulse">Loading…</p>}
 
           {data && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <Card className="bg-white border-gray-200 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 edu-stat-stagger">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -88,7 +90,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 shadow-sm">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -102,7 +104,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 shadow-sm">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -120,7 +122,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 shadow-sm">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -135,8 +137,8 @@ export default function AdminDashboard() {
                 </Card>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <Card className="bg-white border-gray-200 hover:border-gray-300 shadow-sm transition">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 edu-stat-stagger">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-200/60 hover:-translate-y-0.5 cursor-pointer">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -153,7 +155,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 hover:border-gray-300 shadow-sm transition">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-200/60 hover:-translate-y-0.5 cursor-pointer">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -170,7 +172,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 hover:border-gray-300 shadow-sm transition">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-200/60 hover:-translate-y-0.5 cursor-pointer">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -187,7 +189,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 hover:border-gray-300 shadow-sm transition">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-200/60 hover:-translate-y-0.5 cursor-pointer">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -204,7 +206,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 hover:border-gray-300 shadow-sm transition">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-200/60 hover:-translate-y-0.5 cursor-pointer">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -221,7 +223,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 hover:border-gray-300 shadow-sm transition">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-200/60 hover:-translate-y-0.5 cursor-pointer">
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
@@ -239,7 +241,7 @@ export default function AdminDashboard() {
                 </Card>
               </div>
 
-              <Card className="bg-white border-gray-200 shadow-sm">
+              <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5">
                 <CardHeader>
                   <CardTitle className="text-gray-900">Recent Activity</CardTitle>
                   <CardDescription className="text-gray-600">Latest attendance events</CardDescription>
@@ -267,7 +269,8 @@ export default function AdminDashboard() {
             </>
           )}
         </div>
-      </main>
+        </main>
+      </DashboardEntrance>
     </ProtectedRoute>
   )
 }

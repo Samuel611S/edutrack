@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   const uni = db.prepare("SELECT university_id FROM admins WHERE id = ?").get(session.sub) as
     | { university_id: string }
     | undefined
-  const university_id = uni?.university_id ?? "aou_cairo"
+  const university_id = uni?.university_id ?? "edutrack_main"
 
   const id = `course_${randomUUID().slice(0, 8)}`
   try {

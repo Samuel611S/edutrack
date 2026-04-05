@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
+import { DashboardEntrance } from "@/components/dashboard-entrance"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -133,9 +134,10 @@ export default function TeacherDashboard() {
 
   return (
     <ProtectedRoute allowedRoles={["teacher"]}>
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+      <DashboardEntrance>
+        <main className="min-h-screen edu-dashboard-bg">
+          <header className="edu-dashboard-header sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-md shadow-sm shadow-indigo-950/5">
+            <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Teacher Portal</h1>
             </div>
@@ -154,17 +156,17 @@ export default function TeacherDashboard() {
                 Logout
               </Button>
             </div>
-          </div>
-        </header>
+            </div>
+          </header>
 
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {loading && <p className="text-gray-600">Loading…</p>}
+          <div className="max-w-7xl mx-auto px-4 py-8 edu-tabs-enter">
+          {loading && <p className="text-slate-600 text-sm animate-pulse">Loading…</p>}
           {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
           {data && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <Card className="bg-white border-gray-200 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 edu-stat-stagger">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -178,7 +180,7 @@ export default function TeacherDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 shadow-sm">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -192,7 +194,7 @@ export default function TeacherDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 shadow-sm">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -208,17 +210,29 @@ export default function TeacherDashboard() {
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-white border border-gray-200 mb-6 flex flex-wrap h-auto gap-1">
-                  <TabsTrigger value="courses" className="data-[state=active]:bg-gray-100">
+                <TabsList className="mb-6 inline-flex h-auto flex-wrap gap-1 rounded-xl border border-white/80 bg-white/70 p-1.5 shadow-sm backdrop-blur-sm">
+                  <TabsTrigger
+                    value="courses"
+                    className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                  >
                     My Courses
                   </TabsTrigger>
-                  <TabsTrigger value="lectures" className="data-[state=active]:bg-gray-100">
+                  <TabsTrigger
+                    value="lectures"
+                    className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                  >
                     Lectures
                   </TabsTrigger>
-                  <TabsTrigger value="attendance" className="data-[state=active]:bg-gray-100">
+                  <TabsTrigger
+                    value="attendance"
+                    className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                  >
                     Attendance Report
                   </TabsTrigger>
-                  <TabsTrigger value="grades" className="data-[state=active]:bg-gray-100">
+                  <TabsTrigger
+                    value="grades"
+                    className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                  >
                     Grades
                   </TabsTrigger>
                 </TabsList>
@@ -490,7 +504,8 @@ export default function TeacherDashboard() {
             </>
           )}
         </div>
-      </main>
+        </main>
+      </DashboardEntrance>
     </ProtectedRoute>
   )
 }

@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth-context"
 import { ProtectedRoute } from "@/components/protected-route"
+import { DashboardEntrance } from "@/components/dashboard-entrance"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -100,8 +101,9 @@ export default function StudentDashboard() {
 
   return (
     <ProtectedRoute allowedRoles={["student"]}>
-      <main className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <DashboardEntrance>
+        <main className="min-h-screen edu-dashboard-bg">
+          <header className="edu-dashboard-header sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-md shadow-sm shadow-indigo-950/5">
           <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Student Portal</h1>
@@ -141,14 +143,16 @@ export default function StudentDashboard() {
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          {loading && <p className="text-gray-600">Loading dashboard…</p>}
+        <div className="max-w-7xl mx-auto px-4 py-8 edu-tabs-enter">
+          {loading && (
+            <p className="text-slate-600 text-sm animate-pulse">Loading your dashboard…</p>
+          )}
           {loadError && <p className="text-red-600">{loadError}</p>}
 
           {data && (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <Card className="bg-white border-gray-200 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 edu-stat-stagger">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -162,7 +166,7 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 shadow-sm">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -180,7 +184,7 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 shadow-sm">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -198,7 +202,7 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="bg-white border-gray-200 shadow-sm">
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 hover:shadow-lg transition-shadow duration-300">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -218,17 +222,29 @@ export default function StudentDashboard() {
               </div>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-white border border-gray-200 mb-6">
-                  <TabsTrigger value="courses" className="data-[state=active]:bg-gray-100">
+                <TabsList className="mb-6 inline-flex h-auto flex-wrap gap-1 rounded-xl border border-white/80 bg-white/70 p-1.5 shadow-sm backdrop-blur-sm">
+                  <TabsTrigger
+                    value="courses"
+                    className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                  >
                     My Courses
                   </TabsTrigger>
-                  <TabsTrigger value="attendance" className="data-[state=active]:bg-gray-100">
+                  <TabsTrigger
+                    value="attendance"
+                    className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                  >
                     My Attendance
                   </TabsTrigger>
-                  <TabsTrigger value="upcoming" className="data-[state=active]:bg-gray-100">
+                  <TabsTrigger
+                    value="upcoming"
+                    className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                  >
                     Upcoming Lectures
                   </TabsTrigger>
-                  <TabsTrigger value="materials" className="data-[state=active]:bg-gray-100">
+                  <TabsTrigger
+                    value="materials"
+                    className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                  >
                     Course Materials
                   </TabsTrigger>
                 </TabsList>
@@ -443,7 +459,8 @@ export default function StudentDashboard() {
             </>
           )}
         </div>
-      </main>
+        </main>
+      </DashboardEntrance>
     </ProtectedRoute>
   )
 }

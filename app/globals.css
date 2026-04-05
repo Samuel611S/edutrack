@@ -122,3 +122,228 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* === EduTrack+ motion & polish === */
+.font-libre {
+  font-family: var(--font-libre), "Georgia", ui-serif, serif;
+}
+
+@keyframes eduFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes eduScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes eduFloatSlow {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(12px, -10px);
+  }
+}
+
+@keyframes eduFloatSlowReverse {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-14px, 8px);
+  }
+}
+
+@keyframes eduLogoPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 40px -10px rgba(56, 189, 248, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 56px -8px rgba(147, 197, 253, 0.65);
+  }
+}
+
+@keyframes eduDotPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes eduDashboardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes eduHeaderSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes eduLoginBlob {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(4%, -3%) scale(1.05);
+  }
+  66% {
+    transform: translate(-3%, 4%) scale(0.98);
+  }
+}
+
+@keyframes eduShimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.edu-float-slow {
+  animation: eduFloatSlow 14s ease-in-out infinite;
+}
+
+.edu-float-slow-reverse {
+  animation: eduFloatSlowReverse 18s ease-in-out infinite;
+}
+
+.edu-logo-pulse {
+  animation: eduLogoPulse 3s ease-in-out infinite;
+}
+
+.edu-dot-pulse {
+  animation: eduDotPulse 1.2s ease-in-out infinite;
+}
+
+.edu-dashboard-enter {
+  animation: eduDashboardEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.edu-dashboard-header {
+  animation: eduHeaderSlide 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.edu-dashboard-bg {
+  background:
+    radial-gradient(ellipse 100% 80% at 50% -30%, rgba(99, 102, 241, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(236, 72, 153, 0.08), transparent 45%),
+    linear-gradient(165deg, #f8fafc 0%, #eef2ff 40%, #faf5ff 75%, #fdf4ff 100%);
+}
+
+.edu-dashboard-bg-admin {
+  background:
+    radial-gradient(ellipse 90% 60% at 10% 10%, rgba(59, 130, 246, 0.1), transparent 50%),
+    radial-gradient(ellipse 80% 50% at 90% 20%, rgba(16, 185, 129, 0.08), transparent 45%),
+    linear-gradient(180deg, #f0f9ff 0%, #f5f3ff 50%, #fdf4ff 100%);
+}
+
+.edu-stat-stagger > * {
+  animation: eduFadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.edu-stat-stagger > *:nth-child(1) {
+  animation-delay: 0.06s;
+}
+.edu-stat-stagger > *:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.edu-stat-stagger > *:nth-child(3) {
+  animation-delay: 0.18s;
+}
+.edu-stat-stagger > *:nth-child(4) {
+  animation-delay: 0.24s;
+}
+.edu-stat-stagger > *:nth-child(5) {
+  animation-delay: 0.3s;
+}
+.edu-stat-stagger > *:nth-child(6) {
+  animation-delay: 0.36s;
+}
+.edu-stat-stagger > *:nth-child(7) {
+  animation-delay: 0.42s;
+}
+.edu-stat-stagger > *:nth-child(8) {
+  animation-delay: 0.48s;
+}
+
+.edu-tabs-enter {
+  animation: eduFadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+.edu-login-blob-1 {
+  animation: eduLoginBlob 18s ease-in-out infinite;
+}
+
+.edu-login-blob-2 {
+  animation: eduLoginBlob 22s ease-in-out infinite reverse;
+}
+
+.edu-login-blob-3 {
+  animation: eduLoginBlob 26s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+.edu-login-card {
+  animation: eduScaleIn 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.edu-login-title {
+  animation: eduFadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+.edu-login-sub {
+  animation: eduFadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.22s both;
+}
+
+.edu-login-btn-shimmer {
+  background: linear-gradient(
+    105deg,
+    #3b82f6 0%,
+    #6366f1 25%,
+    #8b5cf6 50%,
+    #6366f1 75%,
+    #3b82f6 100%
+  );
+  background-size: 220% auto;
+}
+
+.edu-login-btn-shimmer:hover:not(:disabled) {
+  animation: eduShimmer 2.2s linear infinite;
+}

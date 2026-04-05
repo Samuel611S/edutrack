@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, GraduationCap, Sparkles } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/lib/auth-context"
 
@@ -54,14 +54,12 @@ export default function LoginPage() {
         return
       }
 
-      // Store session info via auth context
       login({
         role: role as "admin" | "teacher" | "student",
         userId: data.userId,
         userName: data.userName,
       })
 
-      // Redirect based on role
       const redirectPaths: Record<string, string> = {
         admin: "/admin/dashboard",
         teacher: "/teacher/dashboard",
@@ -71,87 +69,125 @@ export default function LoginPage() {
       router.push(redirectPaths[role])
     } catch (err) {
       setError("An error occurred. Please try again.")
-      console.error("[v0] Login error:", err)
+      console.error("[EduTrack] Login error:", err)
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-            EduTrack+
+    <main className="relative min-h-screen overflow-hidden flex items-center justify-center p-4">
+      {/* Animated atmosphere */}
+      <div className="absolute inset-0 bg-[#0b1020]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_100%_70%_at_50%_-10%,rgba(99,102,241,0.35),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_0%_100%,rgba(56,189,248,0.2),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_100%_80%,rgba(192,132,252,0.18),transparent_45%)]" />
+
+      <div
+        className="pointer-events-none absolute -top-32 -left-24 h-[28rem] w-[28rem] rounded-full bg-indigo-500/25 blur-[100px] edu-login-blob-1"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -bottom-40 -right-20 h-[32rem] w-[32rem] rounded-full bg-fuchsia-500/20 blur-[110px] edu-login-blob-2"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute top-1/2 left-1/2 h-80 w-80 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[90px] edu-login-blob-3"
+        aria-hidden
+      />
+
+      <div className="relative z-10 w-full max-w-md">
+        <div className="text-center mb-8 edu-login-title">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-white/10 shadow-[0_0_40px_-12px_rgba(99,102,241,0.6)] backdrop-blur-md transition-transform duration-300 hover:scale-[1.03]">
+            <GraduationCap className="h-8 w-8 text-indigo-200" strokeWidth={1.5} />
+          </div>
+          <p className="font-libre text-xs font-normal uppercase tracking-[0.35em] text-slate-400 mb-2">EduTrack+</p>
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-[2.35rem]">
+            <span className="bg-gradient-to-r from-sky-200 via-indigo-200 to-violet-200 bg-clip-text text-transparent">
+              Smart Campus
+            </span>
           </h1>
-          <p className="text-gray-600 text-lg font-medium">Smart Attendance Management</p>
-          <p className="text-gray-500 text-sm mt-1">Track attendance with precision</p>
+          <p className="mt-3 text-slate-400 text-sm flex items-center justify-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-amber-300/90" />
+            Attendance &amp; academic management
+          </p>
         </div>
 
-        {/* Login Card */}
-        <Card className="border-gray-200 bg-white shadow-lg">
-          <CardHeader className="pb-6">
-            <CardTitle className="text-2xl text-gray-900">Sign In</CardTitle>
-            <CardDescription className="text-gray-600">Enter your ID and password</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {error && (
-              <Alert variant="destructive" className="bg-red-50 border-red-200 mb-4">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <AlertDescription className="text-red-700">{error}</AlertDescription>
-              </Alert>
-            )}
+        <div className="edu-login-sub">
+          <Card className="edu-login-card border-white/10 bg-white/[0.07] shadow-2xl shadow-indigo-950/40 backdrop-blur-xl">
+            <CardHeader className="pb-4 space-y-1">
+              <CardTitle className="text-xl text-white">Sign in</CardTitle>
+              <CardDescription className="text-slate-400">Use your university ID and password</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {error && (
+                <Alert
+                  variant="destructive"
+                  className="mb-4 border-red-400/30 bg-red-500/10 text-red-100 [&>svg]:text-red-300"
+                >
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Label htmlFor="id" className="text-gray-700 font-medium">
-                  ID
-                </Label>
-                <Input
-                  id="id"
-                  type="text"
-                  placeholder="Enter your ID"
-                  value={id}
-                  onChange={(e) => setId(e.target.value)}
-                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-blue-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Admin: 02511793 | Teacher: 12511793 | Student: 22511793</p>
-              </div>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="id" className="text-slate-200">
+                    University ID
+                  </Label>
+                  <Input
+                    id="id"
+                    type="text"
+                    placeholder="e.g. 22511793"
+                    value={id}
+                    onChange={(e) => setId(e.target.value)}
+                    className="h-11 border-white/15 bg-white/5 text-white placeholder:text-slate-500 focus-visible:border-indigo-400/60 focus-visible:ring-indigo-400/25 transition-shadow duration-200"
+                    required
+                  />
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Admin 02… · Teacher 12… · Student 22…
+                  </p>
+                </div>
 
-              <div>
-                <Label htmlFor="password" className="text-gray-700 font-medium">
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-blue-500"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Password: 12345678</p>
-              </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="password" className="text-slate-200">
+                    Password
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="h-11 border-white/15 bg-white/5 text-white placeholder:text-slate-500 focus-visible:border-indigo-400/60 focus-visible:ring-indigo-400/25 transition-shadow duration-200"
+                    required
+                  />
+                  <p className="text-[11px] text-slate-500">Demo password shown in course materials: 12345678</p>
+                </div>
 
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-2 rounded-lg transition disabled:opacity-50"
-              >
-                {isLoading ? "Signing in..." : "Sign In"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="edu-login-btn-shimmer mt-2 h-11 w-full border-0 text-white font-semibold shadow-lg shadow-indigo-900/40 transition-transform duration-200 hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
+                >
+                  {isLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Signing in…
+                    </span>
+                  ) : (
+                    "Enter dashboard"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Footer */}
-        <p className="text-gray-500 text-xs text-center mt-6">© 2026 EduTrack+. All rights reserved.</p>
+        <p className="text-center text-[11px] text-slate-500 mt-8 edu-login-sub">
+          © 2026 EduTrack+
+        </p>
       </div>
     </main>
   )
 }
-
-

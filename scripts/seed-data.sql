@@ -1,26 +1,26 @@
 -- ADMIN
 INSERT INTO admins (id, email, full_name, password_hash, university_id)
 VALUES
-('02511793', 'admin@aou.edu.eg', 'Dr. Ahmed Hassan', '12345678', 'aou_cairo');
+('02511793', 'admin@edutrack.edu', 'Dr. Ahmed Hassan', '12345678', 'edutrack_main');
 
 -- TEACHERS
 INSERT INTO teachers (id, email, full_name, password_hash, employee_id, department, university_id)
 VALUES
-('12511793', 'ali.egypt@aou.edu.eg', 'Dr. Ali Mohamed', '12345678', 'EMP001', 'Computer Science', 'aou_cairo'),
-('12511794', 'fatima.mansour@aou.edu.eg', 'Prof. Fatima Mansour', '12345678', 'EMP002', 'Engineering', 'aou_cairo');
+('12511793', 'ali.mohamed@edutrack.edu', 'Dr. Ali Mohamed', '12345678', 'EMP001', 'Computer Science', 'edutrack_main'),
+('12511794', 'fatima.mansour@edutrack.edu', 'Prof. Fatima Mansour', '12345678', 'EMP002', 'Engineering', 'edutrack_main');
 
 -- STUDENTS
 INSERT INTO students (id, email, full_name, password_hash, student_id, major, gpa, university_id)
 VALUES
-('22511793', 'omar.ahmed@student.aou.edu.eg', 'Omar Ahmed', '12345678', 'STU001', 'Computer Science', 3.85, 'aou_cairo'),
-('22511794', 'layla.hassan@student.aou.edu.eg', 'Layla Hassan', '12345678', 'STU002', 'Computer Science', 3.92, 'aou_cairo'),
-('22511795', 'karim.salem@student.aou.edu.eg', 'Karim Salem', '12345678', 'STU003', 'Engineering', 3.65, 'aou_cairo');
+('22511793', 'omar.ahmed@student.edutrack.edu', 'Omar Ahmed', '12345678', 'STU001', 'Computer Science', 3.85, 'edutrack_main'),
+('22511794', 'layla.hassan@student.edutrack.edu', 'Layla Hassan', '12345678', 'STU002', 'Computer Science', 3.92, 'edutrack_main'),
+('22511795', 'karim.salem@student.edutrack.edu', 'Karim Salem', '12345678', 'STU003', 'Engineering', 3.65, 'edutrack_main');
 
 -- COURSES
 INSERT INTO courses (id, course_code, course_name, teacher_id, semester, credits, max_capacity, university_id)
 VALUES
-('course_001', 'CS301', 'Advanced Database Systems', '12511793', '2026-Spring', 3, 30, 'aou_cairo'),
-('course_002', 'ENG201', 'Digital Systems Design', '12511794', '2026-Spring', 3, 35, 'aou_cairo');
+('course_001', 'CS301', 'Advanced Database Systems', '12511793', '2026-Spring', 3, 30, 'edutrack_main'),
+('course_002', 'ENG201', 'Digital Systems Design', '12511794', '2026-Spring', 3, 35, 'edutrack_main');
 
 -- ENROLLMENTS (grades editable by teacher)
 INSERT INTO course_enrollments (id, course_id, student_id, grade)

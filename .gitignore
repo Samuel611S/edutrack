@@ -28,3 +28,7 @@ next-env.d.ts
 
 # Word documents (project reports, etc.)
 *.docx
+
+# SQLite runtime files (WAL mode)
+*.db-shm
+*.db-wal
