@@ -48,6 +48,22 @@ function migrate(db: Database.Database) {
   if (tableExists(db, "attendance") && !columnExists(db, "attendance", "outside_radius_sec")) {
     db.exec("ALTER TABLE attendance ADD COLUMN outside_radius_sec INTEGER DEFAULT 0")
   }
+  if (!tableExists(db, "course_materials")) {
+    db.exec(`
+      CREATE TABLE course_materials (
+        id TEXT PRIMARY KEY,
+        course_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        material_type TEXT NOT NULL,
+        url TEXT NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_course_materials_course_id ON course_materials(course_id);
+    `)
+  }
 }
 
 export function getDb(): Database.Database {

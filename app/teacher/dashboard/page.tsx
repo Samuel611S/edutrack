@@ -22,6 +22,7 @@ import {
   Save,
   BookOpen,
   Loader2,
+  Video,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -109,6 +110,24 @@ export default function TeacherDashboard() {
   const [gradeDrafts, setGradeDrafts] = useState<Record<string, string>>({})
   const [savingGradesFor, setSavingGradesFor] = useState<string | null>(null)
 
+  type CourseMaterial = {
+    id: string
+    title: string
+    description: string | null
+    material_type: string
+    url: string
+  }
+  const [materialsCourseId, setMaterialsCourseId] = useState("")
+  const [courseMaterials, setCourseMaterials] = useState<CourseMaterial[]>([])
+  const [materialsLoading, setMaterialsLoading] = useState(false)
+  const [materialForm, setMaterialForm] = useState({
+    title: "",
+    description: "",
+    materialType: "video" as "video" | "pdf",
+    url: "",
+  })
+  const [savingMaterial, setSavingMaterial] = useState(false)
+
   const load = async () => {
     const res = await fetch("/api/teacher/overview", { credentials: "include" })
     const json = await res.json()
@@ -118,6 +137,7 @@ export default function TeacherDashboard() {
     }
     setData(json)
     if (!lectureCourseId && json.courses?.length) setLectureCourseId(json.courses[0].id)
+    if (!materialsCourseId && json.courses?.length) setMaterialsCourseId(json.courses[0].id)
   }
 
   useEffect(() => {
@@ -144,6 +164,79 @@ export default function TeacherDashboard() {
     }
     setGradeDrafts(next)
   }, [data])
+
+  useEffect(() => {
+    if (activeTab !== "materials" || !materialsCourseId) return
+    let cancelled = false
+    ;(async () => {
+      setMaterialsLoading(true)
+      try {
+        const res = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, { credentials: "include" })
+        const json = await res.json()
+        if (!cancelled && res.ok) setCourseMaterials(json.materials || [])
+        if (!cancelled && !res.ok) setError(json.message || "Could not load materials")
+      } catch {
+        if (!cancelled) setError("Network error loading materials")
+      } finally {
+        if (!cancelled) setMaterialsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, materialsCourseId])
+
+  const addCourseMaterial = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!materialsCourseId) return
+    setSavingMaterial(true)
+    setError("")
+    try {
+      const res = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: materialForm.title,
+          description: materialForm.description || undefined,
+          materialType: materialForm.materialType,
+          url: materialForm.url,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.message || "Could not add material")
+        return
+      }
+      setMaterialForm({ title: "", description: "", materialType: materialForm.materialType, url: "" })
+      const listRes = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, { credentials: "include" })
+      const listJson = await listRes.json()
+      if (listRes.ok) setCourseMaterials(listJson.materials || [])
+    } catch {
+      setError("Network error")
+    } finally {
+      setSavingMaterial(false)
+    }
+  }
+
+  const removeCourseMaterial = async (materialId: string) => {
+    if (!materialsCourseId || !window.confirm("Remove this material from the course?")) return
+    setError("")
+    try {
+      const res = await fetch(`/api/teacher/courses/${materialsCourseId}/materials/${materialId}`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.message || "Could not remove")
+        return
+      }
+      setCourseMaterials((prev) => prev.filter((m) => m.id !== materialId))
+    } catch {
+      setError("Network error")
+    }
+  }
 
   const handleLogout = async () => {
     await logout()
@@ -471,6 +564,13 @@ export default function TeacherDashboard() {
                       className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
                     >
                       Grades
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="materials"
+                      className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                    >
+                      <Video className="w-4 h-4 mr-1.5 inline" />
+                      Materials
                     </TabsTrigger>
                   </TabsList>
 
@@ -894,6 +994,148 @@ export default function TeacherDashboard() {
                         </Button>
                       ))}
                     </div>
+                  </TabsContent>
+
+                  <TabsContent value="materials" className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-2">
+                      <div>
+                        <h2 className="text-xl font-bold text-gray-900">Course materials</h2>
+                        <p className="text-sm text-slate-600 mt-1">
+                          Add YouTube or other video links and PDF URLs for enrolled students. They appear under{" "}
+                          <strong>Course Materials</strong> on the student dashboard.
+                        </p>
+                      </div>
+                    </div>
+
+                    {data.courses.length === 0 ? (
+                      <p className="text-sm text-slate-600">Create a course first.</p>
+                    ) : (
+                      <>
+                        <div className="max-w-md">
+                          <Label>Course</Label>
+                          <select
+                            className="w-full border rounded-md h-10 px-2 bg-white mt-1"
+                            value={materialsCourseId}
+                            onChange={(e) => setMaterialsCourseId(e.target.value)}
+                          >
+                            {data.courses.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.course_code} — {c.course_name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <Card className="border-violet-200 bg-violet-50/40">
+                          <CardHeader>
+                            <CardTitle className="text-lg">Add material</CardTitle>
+                            <CardDescription>
+                              Video: paste a YouTube watch or share link. PDF: use a full URL or a path such as{" "}
+                              <code className="text-xs bg-white/80 px-1 rounded">/materials/handout.pdf</code> if you host
+                              files in <code className="text-xs bg-white/80 px-1 rounded">public/</code>.
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <form onSubmit={addCourseMaterial} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="md:col-span-2">
+                                <Label>Title</Label>
+                                <Input
+                                  className="mt-1"
+                                  value={materialForm.title}
+                                  onChange={(e) => setMaterialForm((p) => ({ ...p, title: e.target.value }))}
+                                  required
+                                  placeholder="e.g. Week 3 lecture recording"
+                                />
+                              </div>
+                              <div>
+                                <Label>Type</Label>
+                                <select
+                                  className="w-full border rounded-md h-10 px-2 bg-white mt-1"
+                                  value={materialForm.materialType}
+                                  onChange={(e) =>
+                                    setMaterialForm((p) => ({
+                                      ...p,
+                                      materialType: e.target.value as "video" | "pdf",
+                                    }))
+                                  }
+                                >
+                                  <option value="video">Video</option>
+                                  <option value="pdf">PDF</option>
+                                </select>
+                              </div>
+                              <div>
+                                <Label>URL</Label>
+                                <Input
+                                  className="mt-1"
+                                  value={materialForm.url}
+                                  onChange={(e) => setMaterialForm((p) => ({ ...p, url: e.target.value }))}
+                                  required
+                                  placeholder="https://… or /materials/file.pdf"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <Label>Description (optional)</Label>
+                                <textarea
+                                  className="w-full min-h-[72px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm mt-1"
+                                  value={materialForm.description}
+                                  onChange={(e) => setMaterialForm((p) => ({ ...p, description: e.target.value }))}
+                                  placeholder="Short note for students"
+                                />
+                              </div>
+                              <div className="md:col-span-2">
+                                <Button type="submit" disabled={savingMaterial} className="bg-violet-600 hover:bg-violet-700">
+                                  {savingMaterial ? "Saving…" : "Add material"}
+                                </Button>
+                              </div>
+                            </form>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-base">Current materials</CardTitle>
+                            <CardDescription>Students enrolled in this course see these on their dashboard.</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {materialsLoading ? (
+                              <p className="text-sm text-slate-600">Loading…</p>
+                            ) : courseMaterials.length === 0 ? (
+                              <p className="text-sm text-slate-600">No materials yet for this course.</p>
+                            ) : (
+                              <ul className="space-y-2">
+                                {courseMaterials.map((m) => (
+                                  <li
+                                    key={m.id}
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-slate-200 bg-slate-50/80"
+                                  >
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-gray-900 text-sm">{m.title}</p>
+                                      <p className="text-xs text-slate-500 uppercase tracking-wide mt-0.5">
+                                        {m.material_type}
+                                      </p>
+                                      <p className="text-xs text-slate-600 truncate mt-1 font-mono">{m.url}</p>
+                                      {m.description && (
+                                        <p className="text-xs text-slate-600 mt-1">{m.description}</p>
+                                      )}
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-red-600 border-red-200 shrink-0"
+                                      onClick={() => removeCourseMaterial(m.id)}
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-1" />
+                                      Remove
+                                    </Button>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </>
+                    )}
                   </TabsContent>
 
                   <TabsContent value="grades" className="space-y-4">

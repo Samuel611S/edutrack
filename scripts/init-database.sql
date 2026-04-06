@@ -130,6 +130,21 @@ CREATE TABLE IF NOT EXISTS lecture_materials (
 );
 
 -- =====================
+-- COURSE MATERIALS (videos, PDFs — visible to enrolled students)
+-- =====================
+CREATE TABLE IF NOT EXISTS course_materials (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  material_type TEXT NOT NULL,
+  url TEXT NOT NULL,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+);
+
+-- =====================
 -- INDEXES
 -- =====================
 CREATE INDEX IF NOT EXISTS idx_teachers_university_id ON teachers(university_id);
@@ -139,5 +154,6 @@ CREATE INDEX IF NOT EXISTS idx_courses_university_id ON courses(university_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON course_enrollments(student_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course_id ON course_enrollments(course_id);
 CREATE INDEX IF NOT EXISTS idx_lectures_course_id ON lectures(course_id);
+CREATE INDEX IF NOT EXISTS idx_course_materials_course_id ON course_materials(course_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_lecture_id ON attendance(lecture_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_student_id ON attendance(student_id);

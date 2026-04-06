@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ChevronLeft, ChevronRight, Pencil, Search, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Pencil, Search, Trash2, Video } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 
 type Course = {
@@ -22,6 +22,14 @@ type Course = {
 }
 
 type TeacherOpt = { id: string; full_name: string }
+
+type AdminCourseMaterial = {
+  id: string
+  title: string
+  description: string | null
+  material_type: string
+  url: string
+}
 
 const PAGE_SIZE = 25
 
@@ -44,6 +52,15 @@ export default function AdminCoursesPage() {
     credits: "",
     max_capacity: "",
     teacher_id: "",
+  })
+  const [adminMaterials, setAdminMaterials] = useState<AdminCourseMaterial[]>([])
+  const [adminMatLoading, setAdminMatLoading] = useState(false)
+  const [adminMatSaving, setAdminMatSaving] = useState(false)
+  const [adminMatForm, setAdminMatForm] = useState({
+    title: "",
+    description: "",
+    materialType: "video" as "video" | "pdf",
+    url: "",
   })
 
   const loadTeachers = useCallback(async () => {
@@ -73,6 +90,28 @@ export default function AdminCoursesPage() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const loadAdminMaterials = useCallback(async (courseId: string) => {
+    setAdminMatLoading(true)
+    try {
+      const res = await fetch(`/api/admin/courses/${encodeURIComponent(courseId)}/materials`, {
+        credentials: "include",
+      })
+      const j = await res.json()
+      if (res.ok) setAdminMaterials(j.materials || [])
+    } finally {
+      setAdminMatLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!editing) {
+      setAdminMaterials([])
+      setAdminMatForm({ title: "", description: "", materialType: "video", url: "" })
+      return
+    }
+    void loadAdminMaterials(editing.id)
+  }, [editing?.id, loadAdminMaterials])
 
   const applySearch = () => {
     setQ(searchInput.trim())
@@ -138,6 +177,52 @@ export default function AdminCoursesPage() {
     setEditing(null)
     setMsg("Saved.")
     await load()
+  }
+
+  const addAdminMaterial = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editing) return
+    setAdminMatSaving(true)
+    setMsg("")
+    try {
+      const res = await fetch(`/api/admin/courses/${encodeURIComponent(editing.id)}/materials`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: adminMatForm.title,
+          description: adminMatForm.description || undefined,
+          materialType: adminMatForm.materialType,
+          url: adminMatForm.url,
+        }),
+      })
+      const j = await res.json()
+      if (!res.ok) {
+        setMsg(j.message || "Could not add material")
+        return
+      }
+      setAdminMatForm({ title: "", description: "", materialType: adminMatForm.materialType, url: "" })
+      await loadAdminMaterials(editing.id)
+      setMsg("Material added.")
+    } finally {
+      setAdminMatSaving(false)
+    }
+  }
+
+  const removeAdminMaterial = async (materialId: string) => {
+    if (!editing || !window.confirm("Remove this material?")) return
+    setMsg("")
+    const res = await fetch(
+      `/api/admin/courses/${encodeURIComponent(editing.id)}/materials/${encodeURIComponent(materialId)}`,
+      { method: "DELETE", credentials: "include" },
+    )
+    const j = await res.json()
+    if (!res.ok) {
+      setMsg(j.message || "Remove failed")
+      return
+    }
+    setAdminMaterials((prev) => prev.filter((m) => m.id !== materialId))
+    setMsg("Material removed.")
   }
 
   const remove = async (c: Course) => {
@@ -300,6 +385,98 @@ export default function AdminCoursesPage() {
                 <Label>Max capacity</Label>
                 <Input value={editDraft.max_capacity} onChange={(e) => setEditDraft((d) => ({ ...d, max_capacity: e.target.value }))} type="number" className="mt-1 bg-white" placeholder="Optional" />
               </div>
+
+              <div className="md:col-span-2 border-t border-amber-200 pt-6 mt-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <Video className="w-5 h-5 text-violet-600" />
+                  <h3 className="text-base font-semibold text-gray-900">Student course materials</h3>
+                </div>
+                <p className="text-sm text-slate-600 mb-4">
+                  Videos (e.g. YouTube) and PDF links appear on the student dashboard for everyone enrolled in this
+                  course.
+                </p>
+
+                <form onSubmit={addAdminMaterial} className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                  <div className="md:col-span-2">
+                    <Label>Title</Label>
+                    <Input
+                      value={adminMatForm.title}
+                      onChange={(e) => setAdminMatForm((f) => ({ ...f, title: e.target.value }))}
+                      className="mt-1 bg-white"
+                      required
+                      placeholder="e.g. Syllabus PDF"
+                    />
+                  </div>
+                  <div>
+                    <Label>Type</Label>
+                    <select
+                      className="w-full border rounded-md h-10 px-2 bg-white mt-1"
+                      value={adminMatForm.materialType}
+                      onChange={(e) =>
+                        setAdminMatForm((f) => ({ ...f, materialType: e.target.value as "video" | "pdf" }))
+                      }
+                    >
+                      <option value="video">Video</option>
+                      <option value="pdf">PDF</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label>URL</Label>
+                    <Input
+                      value={adminMatForm.url}
+                      onChange={(e) => setAdminMatForm((f) => ({ ...f, url: e.target.value }))}
+                      className="mt-1 bg-white"
+                      required
+                      placeholder="https://… or /materials/file.pdf"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Description (optional)</Label>
+                    <textarea
+                      className="w-full min-h-[64px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm mt-1"
+                      value={adminMatForm.description}
+                      onChange={(e) => setAdminMatForm((f) => ({ ...f, description: e.target.value }))}
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Button type="submit" className="bg-violet-600 hover:bg-violet-700" disabled={adminMatSaving}>
+                      {adminMatSaving ? "Adding…" : "Add material"}
+                    </Button>
+                  </div>
+                </form>
+
+                {adminMatLoading ? (
+                  <p className="text-sm text-slate-500">Loading materials…</p>
+                ) : adminMaterials.length === 0 ? (
+                  <p className="text-sm text-slate-500">No materials for this course yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {adminMaterials.map((m) => (
+                      <li
+                        key={m.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-slate-200 bg-white"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm text-gray-900">{m.title}</p>
+                          <p className="text-xs text-slate-500 uppercase">{m.material_type}</p>
+                          <p className="text-xs font-mono text-slate-600 truncate mt-1">{m.url}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-200 shrink-0"
+                          onClick={() => removeAdminMaterial(m.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5 mr-1" />
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
               <div className="md:col-span-2 flex gap-2">
                 <Button type="button" className="bg-indigo-600" onClick={saveEdit}>
                   Save changes

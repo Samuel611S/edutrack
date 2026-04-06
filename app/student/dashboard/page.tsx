@@ -18,9 +18,18 @@ import {
   TrendingUp,
   Award,
   Download,
+  FileText,
+  Video,
+  ExternalLink,
+  Play,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import {
+  youtubeEmbedUrlForActivatedPlayer,
+  youtubeVideoIdFromEmbedUrl,
+  youtubeWatchOrShareToEmbed,
+} from "@/lib/youtube-embed"
 
 type Overview = {
   stats: { enrolledCourses: number; avgAttendance: number; gpa: number; upcomingCount: number }
@@ -38,8 +47,138 @@ type Overview = {
   materialsByCourse: {
     code: string
     name: string
-    items: { id: string; title: string; type: string; href: string | null }[]
+    items: { id: string; title: string; kind: "video" | "pdf" | "file"; href: string | null; description: string | null }[]
   }[]
+}
+
+function isPdfLink(href: string | null) {
+  if (!href) return false
+  const path = href.split("?")[0].toLowerCase()
+  return path.endsWith(".pdf")
+}
+
+const YT_IFRAME_ALLOW =
+  "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+
+function MaterialBlock({
+  item,
+}: {
+  item: { id: string; title: string; kind: "video" | "pdf" | "file"; href: string | null; description: string | null }
+}) {
+  const href = item.href
+  const showPdf = item.kind === "pdf" || (item.kind === "file" && isPdfLink(href))
+  const yt = item.kind === "video" && href ? youtubeWatchOrShareToEmbed(href) : null
+  const ytIframeRef = useRef<HTMLIFrameElement>(null)
+  const [ytRevealed, setYtRevealed] = useState(false)
+  const ytThumbId = yt ? youtubeVideoIdFromEmbedUrl(yt) : null
+
+  const activateYoutube = () => {
+    if (!yt || !ytIframeRef.current) return
+    ytIframeRef.current.src = youtubeEmbedUrlForActivatedPlayer(yt)
+    setYtRevealed(true)
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden shadow-sm">
+      <div className="flex items-start gap-3 p-3 border-b border-gray-100 bg-gray-50/80">
+        {item.kind === "video" ? (
+          <Video className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
+        ) : showPdf ? (
+          <FileText className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        ) : (
+          <BookOpen className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-gray-900 text-sm font-semibold">{item.title}</p>
+          {item.description && <p className="text-gray-600 text-xs mt-1 leading-relaxed">{item.description}</p>}
+        </div>
+        {href && (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            Open
+          </a>
+        )}
+      </div>
+      <div className="p-3 bg-white">
+        {!href && <p className="text-xs text-gray-500">No link available.</p>}
+        {href && item.kind === "video" && yt && (
+          <div className="space-y-2">
+            <div className="relative aspect-video w-full max-w-3xl mx-auto rounded-md overflow-hidden bg-black">
+              <iframe
+                ref={ytIframeRef}
+                title={item.title}
+                className="absolute inset-0 h-full w-full border-0"
+                allowFullScreen
+                allow={YT_IFRAME_ALLOW}
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+              {!ytRevealed && (
+                <button
+                  type="button"
+                  onClick={activateYoutube}
+                  className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/45 text-white hover:bg-black/55 transition-colors"
+                  aria-label={`Play video: ${item.title}`}
+                >
+                  {ytThumbId && (
+                    <img
+                      src={`https://i.ytimg.com/vi/${ytThumbId}/hqdefault.jpg`}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover opacity-90"
+                    />
+                  )}
+                  <span className="relative z-20 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-600 shadow-lg ring-4 ring-white/30">
+                    <Play className="h-8 w-8 ml-1 fill-white text-white" />
+                  </span>
+                  <span className="relative z-20 text-sm font-semibold drop-shadow-md">Play video (enables sound)</span>
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 max-w-3xl mx-auto">
+              Click play above first so your browser allows audio. If it is still silent, the upload may have no audio or{" "}
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">
+                open on YouTube
+              </a>
+              .
+            </p>
+          </div>
+        )}
+        {href && item.kind === "video" && !yt && (
+          <p className="text-xs text-gray-600">
+            This video uses a link that is not embedded here. Use <strong>Open</strong> to watch in a new tab.
+          </p>
+        )}
+        {href && showPdf && (
+          <div className="space-y-2">
+            <div className="w-full h-[min(70vh,520px)] rounded-md border border-gray-200 bg-slate-50 overflow-hidden">
+              <iframe title={item.title} src={href} className="w-full h-full border-0" />
+            </div>
+            <p className="text-xs text-gray-500">
+              If the document does not load inside the page, use Open to view it in a new tab.
+            </p>
+          </div>
+        )}
+        {href && item.kind === "file" && !showPdf && (
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-xs text-gray-600">Lecture attachment</span>
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:underline"
+            >
+              <Download className="w-4 h-4" />
+              Download / view
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export default function StudentDashboard() {
@@ -413,10 +552,13 @@ export default function StudentDashboard() {
                 </TabsContent>
 
                 <TabsContent value="materials" className="space-y-4">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">Course Materials</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">Course Materials</h2>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Videos and PDFs from your instructors, plus files attached to scheduled lectures.
+                  </p>
                   <div className="space-y-4">
                     {data.materialsByCourse.length === 0 && (
-                      <p className="text-gray-600 text-sm">No materials linked to your lectures yet.</p>
+                      <p className="text-gray-600 text-sm">No course materials yet.</p>
                     )}
                     {data.materialsByCourse.map((group) => (
                       <Card key={group.code} className="bg-white border-gray-200 shadow-sm">
@@ -424,21 +566,12 @@ export default function StudentDashboard() {
                           <CardTitle className="text-gray-900">{group.name}</CardTitle>
                           <CardDescription className="text-gray-600">{group.code}</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent className="space-y-4">
+                          {group.items.length === 0 && (
+                            <p className="text-gray-500 text-sm">Nothing listed for this course yet.</p>
+                          )}
                           {group.items.map((material) => (
-                            <div
-                              key={material.id}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded hover:bg-gray-100 transition"
-                            >
-                              <div className="flex items-center gap-3">
-                                <BookOpen className="w-4 h-4 text-blue-600" />
-                                <div>
-                                  <p className="text-gray-900 text-sm font-medium">{material.title}</p>
-                                  <p className="text-gray-600 text-xs">{material.type}</p>
-                                </div>
-                              </div>
-                              <Download className="w-4 h-4 text-gray-600" />
-                            </div>
+                            <MaterialBlock key={material.id} item={material} />
                           ))}
                         </CardContent>
                       </Card>

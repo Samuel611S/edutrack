@@ -124,21 +124,58 @@ export async function GET() {
     course_name: string
   }[]
 
-  const materialsByCourse = new Map<
-    string,
-    { code: string; name: string; items: { id: string; title: string; type: string; href: string | null }[] }
-  >()
+  const courseLevel = db
+    .prepare(
+      `SELECT m.id, m.title, m.description, m.material_type, m.url, c.course_code, c.course_name
+       FROM course_materials m
+       JOIN courses c ON c.id = m.course_id
+       JOIN course_enrollments e ON e.course_id = c.id AND e.student_id = ?
+       ORDER BY c.course_code, m.sort_order, m.created_at`,
+    )
+    .all(sid) as {
+    id: string
+    title: string
+    description: string | null
+    material_type: string
+    url: string
+    course_code: string
+    course_name: string
+  }[]
+
+  type MaterialItem = {
+    id: string
+    title: string
+    kind: "video" | "pdf" | "file"
+    href: string | null
+    description: string | null
+  }
+
+  const materialsByCourse = new Map<string, { code: string; name: string; items: MaterialItem[] }>()
+  for (const m of courseLevel) {
+    const key = m.course_code
+    if (!materialsByCourse.has(key)) {
+      materialsByCourse.set(key, { code: m.course_code, name: m.course_name, items: [] })
+    }
+    const kind = m.material_type === "video" ? "video" : m.material_type === "pdf" ? "pdf" : "file"
+    materialsByCourse.get(key)!.items.push({
+      id: `cm:${m.id}`,
+      title: m.title,
+      kind,
+      href: m.url,
+      description: m.description,
+    })
+  }
   for (const m of materials) {
     const key = m.course_code
     if (!materialsByCourse.has(key)) {
       materialsByCourse.set(key, { code: m.course_code, name: m.course_name, items: [] })
     }
-    const ext = (m.file_url ?? "").split(".").pop()?.toUpperCase() ?? "DOC"
     materialsByCourse.get(key)!.items.push({
-      id: m.id,
+      id: `lec:${m.id}`,
       title: m.title,
-      type: ext.length > 8 ? "FILE" : ext,
+      kind: "file",
       href: m.file_url,
+      description: m.description,
     })
   }
 
