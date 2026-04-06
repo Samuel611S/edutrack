@@ -17,12 +17,14 @@ export async function POST(request: NextRequest) {
       longitude,
       faceVerified,
       timeInSection,
+      outsideRadiusSeconds,
     } = body as {
       lectureId?: string
       latitude?: number
       longitude?: number
       faceVerified?: boolean
       timeInSection?: number
+      outsideRadiusSeconds?: number
     }
 
     if (!lectureId || latitude === undefined || longitude === undefined) {
@@ -90,6 +92,7 @@ export async function POST(request: NextRequest) {
           distance_from_lecture = ?,
           face_verified = ?,
           time_in_section_sec = COALESCE(?, time_in_section_sec),
+          outside_radius_sec = ?,
           status = 'present'
         WHERE lecture_id = ? AND student_id = ?`,
       ).run(
@@ -98,6 +101,7 @@ export async function POST(request: NextRequest) {
         Math.round(distance * 100) / 100,
         faceOk ? 1 : 0,
         timeSec,
+        outsideSec,
         lectureId,
         session.sub,
       )
@@ -106,8 +110,8 @@ export async function POST(request: NextRequest) {
         `INSERT INTO attendance (
           id, lecture_id, student_id, check_in_time, location_verified,
           student_latitude, student_longitude, distance_from_lecture,
-          face_verified, time_in_section_sec, status
-        ) VALUES (?, ?, ?, datetime('now'), 1, ?, ?, ?, ?, ?, 'present')`,
+          face_verified, time_in_section_sec, outside_radius_sec, status
+        ) VALUES (?, ?, ?, datetime('now'), 1, ?, ?, ?, ?, ?, ?, 'present')`,
       ).run(
         id,
         lectureId,
@@ -117,6 +121,7 @@ export async function POST(request: NextRequest) {
         Math.round(distance * 100) / 100,
         faceOk ? 1 : 0,
         timeSec,
+        outsideSec,
       )
     }
 

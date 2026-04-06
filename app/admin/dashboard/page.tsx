@@ -5,7 +5,7 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardEntrance } from "@/components/dashboard-entrance"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, BookOpen, BarChart3, LogOut, Settings, FileText, TrendingUp, Clock } from "lucide-react"
+import { Users, BookOpen, BarChart3, LogOut, FileText, TrendingUp, Clock } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -219,23 +219,6 @@ export default function AdminDashboard() {
                   <CardContent>
                     <Button className="w-full bg-pink-600 hover:bg-pink-700 text-white" asChild>
                       <Link href="/admin/campus-map">Open Campus Map</Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-200/60 hover:-translate-y-0.5 cursor-pointer">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-gray-900">System</CardTitle>
-                        <CardDescription className="text-gray-600">Configure AUTH_SECRET and API keys in .env.local</CardDescription>
-                      </div>
-                      <Settings className="w-8 h-8 text-cyan-600" />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Button className="w-full bg-cyan-600 hover:bg-cyan-700 text-white" variant="secondary" disabled>
-                      Settings (env-based)
                     </Button>
                   </CardContent>
                 </Card>

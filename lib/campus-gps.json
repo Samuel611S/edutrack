@@ -1,0 +1,65 @@
+{
+  "institution": "Arab Open University Egypt",
+  "address": "20 No. 20 Al Hay Al 2, El Shorouk, Cairo Governorate 11211",
+  "coordinateNote": "Campus reference point and Section A–F pins supplied for AOU El Shorouk.",
+  "center": { "lat": 30.15575, "lng": 31.614131 },
+  "lectureLocations": [
+    ["Section A", 30.155911312816503, 31.614183819504508],
+    ["Section B", 30.155903511977797, 31.61467099883365],
+    ["Section C", 30.15551151903733, 31.61437778905222],
+    ["Section D", 30.15573189336974, 31.614339446234645],
+    ["Section E", 30.1559132630261, 31.61443417554865],
+    ["Section F", 30.15577089762507, 31.61415449852636]
+  ],
+  "mapMarkers": [
+    {
+      "id": "campus_ref",
+      "name": "Campus reference (main)",
+      "latitude": 30.15575,
+      "longitude": 31.614131,
+      "type": "facility"
+    },
+    {
+      "id": "section_a",
+      "name": "Section A",
+      "latitude": 30.155911312816503,
+      "longitude": 31.614183819504508,
+      "type": "building"
+    },
+    {
+      "id": "section_b",
+      "name": "Section B",
+      "latitude": 30.155903511977797,
+      "longitude": 31.61467099883365,
+      "type": "building"
+    },
+    {
+      "id": "section_c",
+      "name": "Section C",
+      "latitude": 30.15551151903733,
+      "longitude": 31.61437778905222,
+      "type": "building"
+    },
+    {
+      "id": "section_d",
+      "name": "Section D",
+      "latitude": 30.15573189336974,
+      "longitude": 31.614339446234645,
+      "type": "building"
+    },
+    {
+      "id": "section_e",
+      "name": "Section E",
+      "latitude": 30.1559132630261,
+      "longitude": 31.61443417554865,
+      "type": "building"
+    },
+    {
+      "id": "section_f",
+      "name": "Section F",
+      "latitude": 30.15577089762507,
+      "longitude": 31.61415449852636,
+      "type": "building"
+    }
+  ]
+}

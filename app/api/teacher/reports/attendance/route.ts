@@ -5,10 +5,11 @@ import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 export async function GET(request: Request) {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "admin") return forbidden()
+  if (session.role !== "teacher") return forbidden()
 
   const { searchParams } = new URL(request.url)
   const format = searchParams.get("format")
+  const tid = session.sub
 
   const db = getDb()
   const rows = db
@@ -20,9 +21,10 @@ export async function GET(request: Request) {
        JOIN lectures l ON l.id = a.lecture_id
        JOIN courses c ON c.id = l.course_id
        JOIN students s ON s.id = a.student_id
+       WHERE c.teacher_id = ?
        ORDER BY l.lecture_date DESC, c.course_code, s.full_name`,
     )
-    .all() as {
+    .all(tid) as {
     course_code: string
     course_name: string
     lecture_date: string
@@ -56,7 +58,7 @@ export async function GET(request: Request) {
     return new NextResponse(csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="admin-attendance-report.csv"',
+        "Content-Disposition": 'attachment; filename="teacher-attendance-report.csv"',
       },
     })
   }
@@ -79,7 +81,6 @@ export async function GET(request: Request) {
   }))
 
   return NextResponse.json({
-    count: rows.length,
     summary: {
       totalRows: rows.length,
       present,
@@ -87,6 +88,7 @@ export async function GET(request: Request) {
       attendanceRate: rows.length > 0 ? Math.round((present / rows.length) * 1000) / 10 : 0,
     },
     byCourse,
-    records: rows.slice(0, 300),
+    records: rows.slice(0, 250),
+    count: rows.length,
   })
 }

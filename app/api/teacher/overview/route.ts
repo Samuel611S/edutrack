@@ -12,13 +12,22 @@ export async function GET() {
 
   const courses = db
     .prepare(
-      `SELECT c.id, c.course_code, c.course_name, c.semester,
+      `SELECT c.id, c.course_code, c.course_name, c.semester, c.credits, c.max_capacity, c.description,
               (SELECT COUNT(*) FROM course_enrollments e WHERE e.course_id = c.id) AS students
        FROM courses c
        WHERE c.teacher_id = ?
        ORDER BY c.course_code`,
     )
-    .all(tid) as { id: string; course_code: string; course_name: string; semester: string; students: number }[]
+    .all(tid) as {
+    id: string
+    course_code: string
+    course_name: string
+    semester: string
+    credits: number
+    max_capacity: number | null
+    description: string | null
+    students: number
+  }[]
 
   const courseRows = courses.map((c) => {
     const lecCount =

@@ -42,6 +42,12 @@ function migrate(db: Database.Database) {
   if (tableExists(db, "attendance") && !columnExists(db, "attendance", "time_in_section_sec")) {
     db.exec("ALTER TABLE attendance ADD COLUMN time_in_section_sec INTEGER")
   }
+  if (tableExists(db, "courses") && !columnExists(db, "courses", "description")) {
+    db.exec("ALTER TABLE courses ADD COLUMN description TEXT")
+  }
+  if (tableExists(db, "attendance") && !columnExists(db, "attendance", "outside_radius_sec")) {
+    db.exec("ALTER TABLE attendance ADD COLUMN outside_radius_sec INTEGER DEFAULT 0")
+  }
 }
 
 export function getDb(): Database.Database {

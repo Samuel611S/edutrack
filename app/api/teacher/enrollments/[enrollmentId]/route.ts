@@ -11,8 +11,9 @@ export async function PATCH(request: NextRequest, context: Params) {
 
   const { enrollmentId } = await context.params
   const body = await request.json()
-  const grade = typeof body.grade === "string" ? body.grade.trim() : ""
-  if (!grade) return NextResponse.json({ message: "grade required" }, { status: 400 })
+  const raw = body.grade
+  const grade = typeof raw === "string" ? raw.trim() : raw == null ? "" : String(raw).trim()
+  const gradeValue = grade === "" ? null : grade
 
   const db = getDb()
   const row = db
@@ -25,6 +26,6 @@ export async function PATCH(request: NextRequest, context: Params) {
 
   if (!row) return NextResponse.json({ message: "Not found" }, { status: 404 })
 
-  db.prepare("UPDATE course_enrollments SET grade = ? WHERE id = ?").run(grade, enrollmentId)
+  db.prepare("UPDATE course_enrollments SET grade = ? WHERE id = ?").run(gradeValue, enrollmentId)
   return NextResponse.json({ success: true })
 }

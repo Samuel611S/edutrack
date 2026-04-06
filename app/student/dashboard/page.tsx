@@ -107,23 +107,13 @@ export default function StudentDashboard() {
           <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Student Portal</h1>
-              <div className="flex gap-3 mt-1 text-sm">
-                <button
-                  type="button"
-                  className="text-blue-600 hover:underline"
-                  onClick={() => router.push("/student/attendance")}
-                >
-                  Quick check-in
-                </button>
-                <span className="text-gray-300">|</span>
-                <button
-                  type="button"
-                  className="text-blue-600 hover:underline"
-                  onClick={() => router.push("/student/attendance-map")}
-                >
-                  Map + face check-in
-                </button>
-              </div>
+              <button
+                type="button"
+                className="mt-1 text-sm text-blue-600 hover:underline"
+                onClick={() => router.push("/student/attendance")}
+              >
+                Quick check-in
+              </button>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
