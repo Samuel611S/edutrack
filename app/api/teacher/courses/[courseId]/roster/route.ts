@@ -7,18 +7,22 @@ type Params = { params: Promise<{ courseId: string }> }
 export async function GET(_request: Request, context: Params) {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "teacher") return forbidden()
+  if (session.role !== "teacher" && session.role !== "admin") return forbidden()
 
   const { courseId } = await context.params
   const db = getDb()
 
-  const course = db
-    .prepare(
-      `SELECT c.id, c.course_code, c.course_name, c.semester FROM courses c WHERE c.id = ? AND c.teacher_id = ?`,
-    )
-    .get(courseId, session.sub) as
-    | { id: string; course_code: string; course_name: string; semester: string }
-    | undefined
+  const course = session.role === "admin"
+    ? (db
+        .prepare(`SELECT c.id, c.course_code, c.course_name, c.semester FROM courses c WHERE c.id = ?`)
+        .get(courseId) as { id: string; course_code: string; course_name: string; semester: string } | undefined)
+    : (db
+        .prepare(
+          `SELECT c.id, c.course_code, c.course_name, c.semester FROM courses c WHERE c.id = ? AND c.teacher_id = ?`,
+        )
+        .get(courseId, session.sub) as
+        | { id: string; course_code: string; course_name: string; semester: string }
+        | undefined)
 
   if (!course) return NextResponse.json({ message: "Course not found" }, { status: 404 })
 

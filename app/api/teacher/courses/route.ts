@@ -6,10 +6,10 @@ import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 export async function POST(request: NextRequest) {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "teacher") return forbidden()
+  if (session.role !== "teacher" && session.role !== "admin") return forbidden()
 
   const body = await request.json()
-  const { course_code, course_name, description, semester, credits, max_capacity } = body as Record<
+  const { course_code, course_name, description, semester, credits, max_capacity, teacherId } = body as Record<
     string,
     string | number | null | undefined
   >
@@ -18,7 +18,9 @@ export async function POST(request: NextRequest) {
   }
 
   const db = getDb()
-  const teacher = db.prepare("SELECT university_id FROM teachers WHERE id = ?").get(session.sub) as
+  const assignedTeacherId =
+    session.role === "admin" && typeof teacherId === "string" && teacherId.trim() !== "" ? teacherId.trim() : session.sub
+  const teacher = db.prepare("SELECT id, university_id FROM teachers WHERE id = ?").get(assignedTeacherId) as
     | { university_id: string }
     | undefined
   if (!teacher) return NextResponse.json({ message: "Teacher not found" }, { status: 404 })
@@ -33,7 +35,7 @@ export async function POST(request: NextRequest) {
       String(course_code).trim(),
       String(course_name).trim(),
       description != null && String(description).trim() !== "" ? String(description).trim() : null,
-      session.sub,
+      assignedTeacherId,
       String(semester).trim(),
       credits != null ? Number(credits) : 3,
       max_capacity != null && max_capacity !== "" ? Number(max_capacity) : null,

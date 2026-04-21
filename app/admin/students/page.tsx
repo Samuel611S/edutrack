@@ -18,6 +18,31 @@ type Student = {
   gpa: number | null
 }
 
+type EnrollmentState = {
+  student: { id: string; full_name: string }
+  enrolled: { enrollment_id: string; course_id: string; course_code: string; course_name: string; semester: string }[]
+  courses: { id: string; course_code: string; course_name: string; semester: string }[]
+  requests: {
+    id: string
+    request_type: "add" | "drop"
+    status: "pending" | "approved" | "rejected"
+    is_overload: number
+    reason: string | null
+    created_at: string
+    course_code: string
+    course_name: string
+    semester: string
+    reviewed_by_name: string | null
+  }[]
+  payment: {
+    semester: string
+    total_credits: number
+    amount: number
+    amount_per_credit: number
+    payment_status: "paid" | "unpaid"
+  } | null
+}
+
 const PAGE_SIZE = 25
 
 export default function AdminStudentsPage() {
@@ -30,6 +55,7 @@ export default function AdminStudentsPage() {
   const [msg, setMsg] = useState("")
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Student | null>(null)
+  const [enrollments, setEnrollments] = useState<EnrollmentState | null>(null)
   const [editDraft, setEditDraft] = useState({
     email: "",
     full_name: "",
@@ -136,6 +162,16 @@ export default function AdminStudentsPage() {
     await load()
   }
 
+  const openEnrollments = async (studentId: string) => {
+    const res = await fetch(`/api/admin/students/${encodeURIComponent(studentId)}/enrollments`, { credentials: "include" })
+    const j = await res.json()
+    if (!res.ok) {
+      setMsg(j.message || "Failed to load enrollments")
+      return
+    }
+    setEnrollments(j)
+  }
+
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
       <AdminPageShell title="Students" subtitle="Search, browse, create, edit, and remove student accounts">
@@ -204,6 +240,9 @@ export default function AdminStudentsPage() {
                           <div className="flex gap-1">
                             <Button type="button" size="sm" variant="outline" className="h-8 px-2" onClick={() => startEdit(r)}>
                               <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button type="button" size="sm" variant="outline" className="h-8 px-2" onClick={() => void openEnrollments(r.id)}>
+                              Courses
                             </Button>
                             <Button
                               type="button"
@@ -315,6 +354,52 @@ export default function AdminStudentsPage() {
                 <Button type="button" variant="outline" onClick={() => setEditing(null)}>
                   Cancel
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {enrollments && (
+          <Card className="bg-blue-50/70 border-blue-200 shadow-md mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Course process view — {enrollments.student.full_name}</CardTitle>
+              <CardDescription>Admin can monitor all registration requests, approvals, and payment status.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2 flex-wrap">
+                <Button type="button" variant="outline" onClick={() => setEnrollments(null)}>
+                  Close
+                </Button>
+              </div>
+              {enrollments.payment && (
+                <div className="rounded border bg-white px-3 py-2 text-sm">
+                  Payment: {enrollments.payment.semester} | {enrollments.payment.total_credits} credits |{" "}
+                  {enrollments.payment.amount_per_credit.toLocaleString()} per credit | Total{" "}
+                  {enrollments.payment.amount.toLocaleString()} | Status{" "}
+                  <strong>{enrollments.payment.payment_status.toUpperCase()}</strong>
+                </div>
+              )}
+              <div className="space-y-2">
+                {enrollments.enrolled.map((e) => (
+                  <div key={e.enrollment_id} className="border rounded bg-white px-3 py-2">
+                    <p className="text-sm">
+                      {e.course_code} - {e.course_name} ({e.semester})
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-slate-700">Request history</p>
+                {enrollments.requests.length === 0 && <p className="text-sm text-slate-500">No requests yet.</p>}
+                {enrollments.requests.map((r) => (
+                  <div key={r.id} className="rounded border bg-white px-3 py-2 text-sm">
+                    {r.course_code} - {r.course_name} ({r.semester}) | {r.request_type.toUpperCase()} |{" "}
+                    <strong>{r.status.toUpperCase()}</strong>
+                    {r.reviewed_by_name ? ` | Teacher: ${r.reviewed_by_name}` : ""}
+                    {r.is_overload === 1 ? " | Overload request" : ""}
+                    {r.reason ? ` | Reason: ${r.reason}` : ""}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

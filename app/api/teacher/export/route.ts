@@ -5,16 +5,20 @@ import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 export async function GET(request: Request) {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "teacher") return forbidden()
+  if (session.role !== "teacher" && session.role !== "admin") return forbidden()
 
   const { searchParams } = new URL(request.url)
   const courseId = searchParams.get("courseId")
   if (!courseId) return NextResponse.json({ message: "courseId required" }, { status: 400 })
 
   const db = getDb()
-  const course = db
-    .prepare("SELECT course_code, course_name FROM courses WHERE id = ? AND teacher_id = ?")
-    .get(courseId, session.sub) as { course_code: string; course_name: string } | undefined
+  const course = session.role === "admin"
+    ? (db.prepare("SELECT course_code, course_name FROM courses WHERE id = ?").get(courseId) as
+        | { course_code: string; course_name: string }
+        | undefined)
+    : (db.prepare("SELECT course_code, course_name FROM courses WHERE id = ? AND teacher_id = ?").get(courseId, session.sub) as
+        | { course_code: string; course_name: string }
+        | undefined)
   if (!course) return NextResponse.json({ message: "Not found" }, { status: 404 })
 
   const rows = db

@@ -5,11 +5,12 @@ import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 export async function GET(request: Request) {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "teacher") return forbidden()
+  if (session.role !== "teacher" && session.role !== "admin") return forbidden()
 
   const { searchParams } = new URL(request.url)
   const format = searchParams.get("format")
   const tid = session.sub
+  const allAccess = session.role === "admin"
 
   const db = getDb()
   const rows = db
@@ -21,10 +22,10 @@ export async function GET(request: Request) {
        JOIN lectures l ON l.id = a.lecture_id
        JOIN courses c ON c.id = l.course_id
        JOIN students s ON s.id = a.student_id
-       WHERE c.teacher_id = ?
+       WHERE (? = 1 OR c.teacher_id = ?)
        ORDER BY l.lecture_date DESC, c.course_code, s.full_name`,
     )
-    .all(tid) as {
+    .all(allAccess ? 1 : 0, tid) as {
     course_code: string
     course_name: string
     lecture_date: string

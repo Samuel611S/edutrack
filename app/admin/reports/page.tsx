@@ -4,8 +4,7 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { AdminPageShell } from "@/components/admin-page-shell"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Download, FileJson, PieChart, Users } from "lucide-react"
-import Link from "next/link"
+import { Download, PieChart, Users } from "lucide-react"
 import { useEffect, useState } from "react"
 
 type Summary = { totalRows: number; present: number; absent: number; attendanceRate: number }
@@ -53,28 +52,24 @@ export default function AdminReportsPage() {
                   <CardDescription className="text-indigo-700 font-medium">Total marks</CardDescription>
                   <CardTitle className="text-3xl font-bold text-indigo-950">{summary?.totalRows ?? 0}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-slate-600">Rows in attendance table (all courses)</CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-emerald-50 to-white border-emerald-100 shadow-md">
                 <CardHeader className="pb-2">
                   <CardDescription className="text-emerald-800 font-medium">Present</CardDescription>
                   <CardTitle className="text-3xl font-bold text-emerald-900">{summary?.present ?? 0}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-slate-600">Checked-in as present</CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-amber-50 to-white border-amber-100 shadow-md">
                 <CardHeader className="pb-2">
                   <CardDescription className="text-amber-900 font-medium">Absent / other</CardDescription>
                   <CardTitle className="text-3xl font-bold text-amber-950">{summary?.absent ?? 0}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-slate-600">Not present or other status</CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-violet-50 to-white border-violet-100 shadow-md">
                 <CardHeader className="pb-2">
                   <CardDescription className="text-violet-800 font-medium">Overall rate</CardDescription>
                   <CardTitle className="text-3xl font-bold text-violet-950">{summary?.attendanceRate ?? 0}%</CardTitle>
                 </CardHeader>
-                <CardContent className="text-xs text-slate-600">Present ÷ total rows</CardContent>
               </Card>
             </div>
 
@@ -85,12 +80,6 @@ export default function AdminReportsPage() {
                   Download full CSV
                 </a>
               </Button>
-              <Button variant="outline" asChild className="bg-white border-slate-200">
-                <Link href="/api/admin/reports/attendance" target="_blank" className="gap-2">
-                  <FileJson className="w-4 h-4" />
-                  Open JSON (preview)
-                </Link>
-              </Button>
             </div>
 
             <Card className="bg-white/95 border-white/80 shadow-lg overflow-hidden">
@@ -99,7 +88,6 @@ export default function AdminReportsPage() {
                   <PieChart className="w-5 h-5 text-indigo-600" />
                   <CardTitle className="text-lg">By course</CardTitle>
                 </div>
-                <CardDescription>Present / total marks per course code</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
@@ -116,9 +104,7 @@ export default function AdminReportsPage() {
                     <tbody>
                       {byCourse.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="py-8 px-4 text-center text-slate-500">
-                            No attendance data yet — students need to check in to lectures.
-                          </td>
+                          <td colSpan={5} className="py-8 px-4 text-center text-slate-500">No records.</td>
                         </tr>
                       )}
                       {byCourse.map((r) => (
@@ -146,7 +132,6 @@ export default function AdminReportsPage() {
                   <Users className="w-5 h-5 text-slate-700" />
                   <CardTitle className="text-lg">Recent sample</CardTitle>
                 </div>
-                <CardDescription>First {sample.length} rows (full dataset in CSV)</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto max-h-[360px] overflow-y-auto">

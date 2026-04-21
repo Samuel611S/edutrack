@@ -179,6 +179,36 @@ export async function GET() {
     })
   }
 
+  const semesterRow = db
+    .prepare(
+      `SELECT c.semester
+       FROM course_enrollments e
+       JOIN courses c ON c.id = e.course_id
+       WHERE e.student_id = ?
+       ORDER BY c.semester DESC
+       LIMIT 1`,
+    )
+    .get(sid) as { semester: string } | undefined
+  const semester = semesterRow?.semester ?? "2026-Spring"
+  const paymentTotals = db
+    .prepare(
+      `SELECT COALESCE(SUM(c.credits), 0) AS total_credits
+       FROM course_enrollments e
+       JOIN courses c ON c.id = e.course_id
+       WHERE e.student_id = ? AND c.semester = ?`,
+    )
+    .get(sid, semester) as { total_credits: number }
+  const tuitionAmount = Number(paymentTotals.total_credits || 0) * 4000
+  const paymentRow = db
+    .prepare(
+      `SELECT payment_status, COALESCE(paid_amount, 0) AS paid_amount
+       FROM student_payments
+       WHERE student_id = ? AND semester = ?`,
+    )
+    .get(sid, semester) as { payment_status: "paid" | "unpaid"; paid_amount: number } | undefined
+  const paidAmount = Math.min(tuitionAmount, Math.max(0, Number(paymentRow?.paid_amount || 0)))
+  const balance = Math.max(0, tuitionAmount - paidAmount)
+
   return NextResponse.json({
     stats: {
       enrolledCourses: courseRows.length,
@@ -193,5 +223,12 @@ export async function GET() {
     courses: courseRows,
     upcomingLectures,
     materialsByCourse: Array.from(materialsByCourse.values()),
+    finance: {
+      semester,
+      tuitionAmount,
+      paidAmount,
+      balance,
+      paymentStatus: balance <= 0 ? "paid" : "unpaid",
+    },
   })
 }

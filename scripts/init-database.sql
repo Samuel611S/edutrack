@@ -76,6 +76,49 @@ CREATE TABLE IF NOT EXISTS course_enrollments (
 );
 
 -- =====================
+-- ENROLLMENT REQUESTS (student add/drop workflow)
+-- =====================
+CREATE TABLE IF NOT EXISTS enrollment_requests (
+  id TEXT PRIMARY KEY,
+  batch_id TEXT,
+  student_id TEXT NOT NULL,
+  course_id TEXT NOT NULL,
+  request_type TEXT NOT NULL CHECK(request_type IN ('add', 'drop')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+  is_overload INTEGER DEFAULT 0,
+  reason TEXT,
+  reviewed_by TEXT,
+  reviewed_by_role TEXT,
+  reviewed_by_name TEXT,
+  reviewed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+  FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+  FOREIGN KEY (reviewed_by) REFERENCES teachers(id) ON DELETE SET NULL
+);
+
+-- =====================
+-- STUDENT PAYMENTS
+-- =====================
+CREATE TABLE IF NOT EXISTS student_payments (
+  id TEXT PRIMARY KEY,
+  student_id TEXT NOT NULL,
+  semester TEXT NOT NULL,
+  total_credits INTEGER NOT NULL,
+  amount INTEGER NOT NULL,
+  paid_amount INTEGER NOT NULL DEFAULT 0,
+  amount_per_credit INTEGER NOT NULL DEFAULT 4000,
+  payment_status TEXT NOT NULL DEFAULT 'unpaid' CHECK(payment_status IN ('unpaid', 'paid')),
+  payment_reference TEXT,
+  payment_provider TEXT,
+  paid_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(student_id, semester),
+  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+);
+
+-- =====================
 -- LECTURES
 -- =====================
 CREATE TABLE IF NOT EXISTS lectures (
@@ -153,6 +196,10 @@ CREATE INDEX IF NOT EXISTS idx_courses_teacher_id ON courses(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_courses_university_id ON courses(university_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_student_id ON course_enrollments(student_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_course_id ON course_enrollments(course_id);
+CREATE INDEX IF NOT EXISTS idx_enrollment_requests_student_id ON enrollment_requests(student_id);
+CREATE INDEX IF NOT EXISTS idx_enrollment_requests_batch_id ON enrollment_requests(batch_id);
+CREATE INDEX IF NOT EXISTS idx_enrollment_requests_course_id ON enrollment_requests(course_id);
+CREATE INDEX IF NOT EXISTS idx_enrollment_requests_status ON enrollment_requests(status);
 CREATE INDEX IF NOT EXISTS idx_lectures_course_id ON lectures(course_id);
 CREATE INDEX IF NOT EXISTS idx_course_materials_course_id ON course_materials(course_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_lecture_id ON attendance(lecture_id);

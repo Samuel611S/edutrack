@@ -67,6 +67,21 @@ type RosterStudent = {
   grade: string
 }
 
+type EnrollmentRequest = {
+  id: string
+  batch_id: string | null
+  request_type: "add" | "drop"
+  status: "pending" | "approved" | "rejected"
+  is_overload: number
+  reason: string | null
+  student_id: string
+  student_name: string
+  student_code: string
+  course_id: string
+  course_code: string
+  course_name: string
+}
+
 const emptyCourseForm = {
   course_code: "",
   course_name: "",
@@ -109,6 +124,8 @@ export default function TeacherDashboard() {
 
   const [gradeDrafts, setGradeDrafts] = useState<Record<string, string>>({})
   const [savingGradesFor, setSavingGradesFor] = useState<string | null>(null)
+  const [requests, setRequests] = useState<EnrollmentRequest[]>([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
 
   type CourseMaterial = {
     id: string
@@ -185,6 +202,24 @@ export default function TeacherDashboard() {
       cancelled = true
     }
   }, [activeTab, materialsCourseId])
+
+  useEffect(() => {
+    if (activeTab !== "requests") return
+    let cancelled = false
+    ;(async () => {
+      setRequestsLoading(true)
+      try {
+        const res = await fetch("/api/teacher/requests", { credentials: "include" })
+        const json = await res.json()
+        if (!cancelled && res.ok) setRequests(json.requests || [])
+      } finally {
+        if (!cancelled) setRequestsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab])
 
   const addCourseMaterial = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -327,6 +362,27 @@ export default function TeacherDashboard() {
     if (res.ok) setRoster(json.students || [])
   }
 
+  const setAttendanceStatus = async (lectureId: string, studentId: string, status: "present" | "absent") => {
+    setError("")
+    try {
+      const res = await fetch(`/api/teacher/lectures/${lectureId}/attendance`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentId, status }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.message || "Could not update attendance")
+        return
+      }
+      setRoster((prev) => prev.map((row) => (row.student_id === studentId ? { ...row, status } : row)))
+      await load()
+    } catch {
+      setError("Network error updating attendance")
+    }
+  }
+
   const openCourseRoster = async (courseId: string) => {
     setRosterCourseId(courseId)
     setRosterRows([])
@@ -452,8 +508,26 @@ export default function TeacherDashboard() {
     window.open(`/api/teacher/export?courseId=${encodeURIComponent(courseId)}`, "_blank")
   }
 
+  const processRequest = async (requestId: string, action: "approve" | "reject") => {
+    const res = await fetch(`/api/teacher/requests/${requestId}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    })
+    const json = await res.json()
+    if (!res.ok) {
+      setError(json.message || "Could not process request")
+      return
+    }
+    const listRes = await fetch("/api/teacher/requests", { credentials: "include" })
+    const listJson = await listRes.json()
+    if (listRes.ok) setRequests(listJson.requests || [])
+    await load()
+  }
+
   return (
-    <ProtectedRoute allowedRoles={["teacher"]}>
+    <ProtectedRoute allowedRoles={["teacher", "admin"]}>
       <DashboardEntrance>
         <main className="min-h-screen edu-dashboard-bg">
           <header className="edu-dashboard-header sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-md shadow-sm shadow-indigo-950/5">
@@ -566,6 +640,12 @@ export default function TeacherDashboard() {
                       Grades
                     </TabsTrigger>
                     <TabsTrigger
+                      value="requests"
+                      className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
+                    >
+                      Enrollment Requests
+                    </TabsTrigger>
+                    <TabsTrigger
                       value="materials"
                       className="rounded-lg data-[state=active]:bg-indigo-600 data-[state=active]:text-white data-[state=inactive]:text-slate-600"
                     >
@@ -590,7 +670,6 @@ export default function TeacherDashboard() {
                             <BookOpen className="w-5 h-5" />
                             New course
                           </CardTitle>
-                          <CardDescription>Create a course you teach. You can edit details anytime.</CardDescription>
                         </CardHeader>
                         <CardContent>
                           <form onSubmit={createCourse} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -664,7 +743,6 @@ export default function TeacherDashboard() {
                       <Card className="border-amber-200 bg-amber-50/40">
                         <CardHeader>
                           <CardTitle className="text-lg">Edit course</CardTitle>
-                          <CardDescription>Update catalog details for this course.</CardDescription>
                         </CardHeader>
                         <CardContent>
                           <form onSubmit={saveEditCourse} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -812,10 +890,6 @@ export default function TeacherDashboard() {
                       <Card className="border-blue-200 bg-blue-50/50">
                         <CardHeader>
                           <CardTitle className="text-lg">New lecture session</CardTitle>
-                          <CardDescription>
-                            Sessions are always {LECTURE_DURATION_MINUTES} minutes (end time follows start). GPS is used
-                            for student check-in.
-                          </CardDescription>
                         </CardHeader>
                         <CardContent>
                           <form onSubmit={createLecture} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -854,9 +928,6 @@ export default function TeacherDashboard() {
                                 }}
                                 required
                               />
-                              <p className="text-xs text-slate-500 mt-1">
-                                End is fixed at {LECTURE_DURATION_MINUTES} minutes later (attendance policy).
-                              </p>
                             </div>
                             <div>
                               <Label>End time</Label>
@@ -948,9 +1019,29 @@ export default function TeacherDashboard() {
                           {roster.map((r) => (
                             <div key={r.student_id} className="flex justify-between py-1 border-b border-gray-100">
                               <span>{r.full_name}</span>
-                              <span className={r.status === "present" ? "text-emerald-600" : "text-amber-600"}>
-                                {r.status || "absent"}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={r.status === "present" ? "text-emerald-600" : "text-amber-600"}>
+                                  {r.status || "absent"}
+                                </span>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => void setAttendanceStatus(rosterLectureId, r.student_id, "present")}
+                                >
+                                  Mark attended
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => void setAttendanceStatus(rosterLectureId, r.student_id, "absent")}
+                                >
+                                  Mark absent
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </CardContent>
@@ -979,7 +1070,6 @@ export default function TeacherDashboard() {
                                   style={{ width: `${Math.min(100, course.avgAttendance)}%` }}
                                 />
                               </div>
-                              <p className="text-gray-600 text-xs mt-2">Based on present marks vs. lectures × enrollments</p>
                             </div>
                           ))}
                         </div>
@@ -1000,10 +1090,6 @@ export default function TeacherDashboard() {
                     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-2">
                       <div>
                         <h2 className="text-xl font-bold text-gray-900">Course materials</h2>
-                        <p className="text-sm text-slate-600 mt-1">
-                          Add YouTube or other video links and PDF URLs for enrolled students. They appear under{" "}
-                          <strong>Course Materials</strong> on the student dashboard.
-                        </p>
                       </div>
                     </div>
 
@@ -1029,11 +1115,6 @@ export default function TeacherDashboard() {
                         <Card className="border-violet-200 bg-violet-50/40">
                           <CardHeader>
                             <CardTitle className="text-lg">Add material</CardTitle>
-                            <CardDescription>
-                              Video: paste a YouTube watch or share link. PDF: use a full URL or a path such as{" "}
-                              <code className="text-xs bg-white/80 px-1 rounded">/materials/handout.pdf</code> if you host
-                              files in <code className="text-xs bg-white/80 px-1 rounded">public/</code>.
-                            </CardDescription>
                           </CardHeader>
                           <CardContent>
                             <form onSubmit={addCourseMaterial} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1094,7 +1175,6 @@ export default function TeacherDashboard() {
                         <Card>
                           <CardHeader>
                             <CardTitle className="text-base">Current materials</CardTitle>
-                            <CardDescription>Students enrolled in this course see these on their dashboard.</CardDescription>
                           </CardHeader>
                           <CardContent>
                             {materialsLoading ? (
@@ -1138,11 +1218,48 @@ export default function TeacherDashboard() {
                     )}
                   </TabsContent>
 
+                  <TabsContent value="requests" className="space-y-4">
+                    <h2 className="text-xl font-bold text-gray-900">Student add/drop requests</h2>
+                    {requestsLoading && <p className="text-sm text-slate-600">Loading…</p>}
+                    {!requestsLoading && requests.length === 0 && (
+                      <p className="text-sm text-slate-600">No requests for your courses.</p>
+                    )}
+                    <div className="space-y-3">
+                      {requests.map((r) => (
+                        <Card key={r.id}>
+                          <CardContent className="pt-4 space-y-2">
+                            <p className="font-medium">
+                              {r.course_code} - {r.course_name}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              Student: {r.student_name} ({r.student_code}) | Request: {r.request_type.toUpperCase()} | Status:{" "}
+                              <strong>{r.status.toUpperCase()}</strong>
+                            </p>
+                            {r.batch_id && <p className="text-xs text-slate-500">Batch: {r.batch_id}</p>}
+                            {r.is_overload === 1 && <p className="text-xs text-amber-700">Overload request (5th+ course)</p>}
+                            {r.reason && <p className="text-xs text-slate-600">Reason: {r.reason}</p>}
+                            {r.status === "pending" && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="bg-emerald-600 hover:bg-emerald-700"
+                                  onClick={() => void processRequest(r.id, "approve")}
+                                >
+                                  Approve
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => void processRequest(r.id, "reject")}>
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+
                   <TabsContent value="grades" className="space-y-4">
                     <h2 className="text-xl font-bold text-gray-900 mb-2">Grade management</h2>
-                    <p className="text-sm text-slate-600 mb-4">
-                      Edit letter grades, then press <strong>Save grades</strong> to update the database for that course.
-                    </p>
                     {data.courses.map((course) => (
                       <Card key={course.id}>
                         <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2">

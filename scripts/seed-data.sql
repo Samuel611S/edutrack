@@ -715,6 +715,15 @@ VALUES
 ('course_b089', 'EDU089', 'Corporate Finance — Section 15', 'Course on Corporate Finance, linked to Linear Algebra. Lectures and exercises for the term.', '12520029', '2026-Spring', 3, 80, 'edutrack_main'),
 ('course_b090', 'EDU090', 'Management Information Systems — Section 01', 'Course on Management Information Systems, linked to Modern Physics. Lectures and exercises for the term.', '12520030', '2026-Spring', 3, 80, 'edutrack_main');
 
+-- MIXED CREDIT HOURS (3 / 4 / 8)
+UPDATE courses
+SET credits = CASE
+  WHEN (CAST(SUBSTR(course_code, 4) AS INTEGER) % 10) = 0 THEN 8
+  WHEN (CAST(SUBSTR(course_code, 4) AS INTEGER) % 3) = 0 THEN 4
+  ELSE 3
+END
+WHERE course_code LIKE 'EDU%';
+
 -- ENROLLMENTS
 INSERT INTO course_enrollments (id, course_id, student_id, grade)
 VALUES
@@ -2891,3 +2900,35 @@ VALUES
 ('mat_b013', 'lec_b013', 'Week 1 materials', '/materials/w1.pdf', 'Readings and exercises', 0),
 ('mat_b014', 'lec_b014', 'Week 1 materials', '/materials/w1.pdf', 'Readings and exercises', 0),
 ('mat_b015', 'lec_b015', 'Week 1 materials', '/materials/w1.pdf', 'Readings and exercises', 0);
+
+-- Registration starts empty: students must request courses first.
+DELETE FROM course_enrollments;
+DELETE FROM enrollment_requests;
+DELETE FROM student_payments;
+
+-- Demo virtual course materials (PDFs/videos)
+INSERT OR IGNORE INTO course_materials (id, course_id, title, description, material_type, url, sort_order)
+VALUES
+('cm_demo_001', 'course_b001', 'Database Indexing Handout (PDF)', 'Virtual PDF material for practice.', 'pdf', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 1),
+('cm_demo_002', 'course_b002', 'Algorithms Week 2 Slides (PDF)', 'Complexity and recursion examples.', 'pdf', 'https://www.orimi.com/pdf-test.pdf', 1),
+('cm_demo_003', 'course_b003', 'Security Intro Video', 'Virtual recorded lecture.', 'video', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 1),
+('cm_demo_004', 'course_b004', 'Programming Basics Notes (PDF)', 'Sample downloadable notes.', 'pdf', 'https://unec.edu.az/application/uploads/2014/12/pdf-sample.pdf', 1),
+('cm_demo_005', 'course_b005', 'Digital Systems Tutorial Video', 'Boolean algebra walkthrough.', 'video', 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', 1);
+
+-- Demo enrollments so some students have upcoming lectures in attendance pages
+INSERT OR IGNORE INTO course_enrollments (id, course_id, student_id, enrollment_date, grade)
+VALUES
+('enr_demo_001', 'course_b001', '22530001', CURRENT_TIMESTAMP, NULL),
+('enr_demo_002', 'course_b002', '22530001', CURRENT_TIMESTAMP, NULL),
+('enr_demo_003', 'course_b003', '22530002', CURRENT_TIMESTAMP, NULL),
+('enr_demo_004', 'course_b004', '22530003', CURRENT_TIMESTAMP, NULL),
+('enr_demo_005', 'course_b005', '22530004', CURRENT_TIMESTAMP, NULL);
+
+-- Extra upcoming lectures for demo students/courses
+INSERT OR IGNORE INTO lectures (id, course_id, lecture_date, start_time, end_time, location, latitude, longitude, allowed_radius_m)
+VALUES
+('lec_demo_001', 'course_b001', date('now', '+1 day'), '10:00', '11:30', 'Section A', 30.155911312816503, 31.614183819504508, 100),
+('lec_demo_002', 'course_b002', date('now', '+2 day'), '10:00', '11:30', 'Section B', 30.155903511977797, 31.61467099883365, 100),
+('lec_demo_003', 'course_b003', date('now', '+3 day'), '10:00', '11:30', 'Section C', 30.15551151903733, 31.61437778905222, 100),
+('lec_demo_004', 'course_b004', date('now', '+4 day'), '10:00', '11:30', 'Section D', 30.15573189336974, 31.614339446234645, 100),
+('lec_demo_005', 'course_b005', date('now', '+5 day'), '10:00', '11:30', 'Section E', 30.1559132630261, 31.61443417554865, 100);

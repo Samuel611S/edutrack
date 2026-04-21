@@ -15,7 +15,6 @@ import {
   AlertCircle,
   MapPin,
   Clock,
-  TrendingUp,
   Award,
   Download,
   FileText,
@@ -25,6 +24,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
 import {
   youtubeEmbedUrlForActivatedPlayer,
   youtubeVideoIdFromEmbedUrl,
@@ -49,6 +49,13 @@ type Overview = {
     name: string
     items: { id: string; title: string; kind: "video" | "pdf" | "file"; href: string | null; description: string | null }[]
   }[]
+  finance: {
+    semester: string
+    tuitionAmount: number
+    paidAmount: number
+    balance: number
+    paymentStatus: "paid" | "unpaid"
+  }
 }
 
 function isPdfLink(href: string | null) {
@@ -66,8 +73,9 @@ function MaterialBlock({
   item: { id: string; title: string; kind: "video" | "pdf" | "file"; href: string | null; description: string | null }
 }) {
   const href = item.href
+  const safeHref = href ? encodeURI(href) : null
   const showPdf = item.kind === "pdf" || (item.kind === "file" && isPdfLink(href))
-  const yt = item.kind === "video" && href ? youtubeWatchOrShareToEmbed(href) : null
+  const yt = item.kind === "video" && safeHref ? youtubeWatchOrShareToEmbed(safeHref) : null
   const ytIframeRef = useRef<HTMLIFrameElement>(null)
   const [ytRevealed, setYtRevealed] = useState(false)
   const ytThumbId = yt ? youtubeVideoIdFromEmbedUrl(yt) : null
@@ -92,9 +100,9 @@ function MaterialBlock({
           <p className="text-gray-900 text-sm font-semibold">{item.title}</p>
           {item.description && <p className="text-gray-600 text-xs mt-1 leading-relaxed">{item.description}</p>}
         </div>
-        {href && (
+        {safeHref && (
           <a
-            href={href}
+            href={safeHref}
             target="_blank"
             rel="noopener noreferrer"
             className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800"
@@ -105,8 +113,8 @@ function MaterialBlock({
         )}
       </div>
       <div className="p-3 bg-white">
-        {!href && <p className="text-xs text-gray-500">No link available.</p>}
-        {href && item.kind === "video" && yt && (
+        {!safeHref && <p className="text-xs text-gray-500">No link available.</p>}
+        {safeHref && item.kind === "video" && yt && (
           <div className="space-y-2">
             <div className="relative aspect-video w-full max-w-3xl mx-auto rounded-md overflow-hidden bg-black">
               <iframe
@@ -140,35 +148,36 @@ function MaterialBlock({
             </div>
             <p className="text-xs text-gray-500 max-w-3xl mx-auto">
               Click play above first so your browser allows audio. If it is still silent, the upload may have no audio or{" "}
-              <a href={href} target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">
+              <a href={safeHref} target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">
                 open on YouTube
               </a>
               .
             </p>
           </div>
         )}
-        {href && item.kind === "video" && !yt && (
+        {safeHref && item.kind === "video" && !yt && (
           <p className="text-xs text-gray-600">
             This video uses a link that is not embedded here. Use <strong>Open</strong> to watch in a new tab.
           </p>
         )}
-        {href && showPdf && (
+        {safeHref && showPdf && (
           <div className="space-y-2">
             <div className="w-full h-[min(70vh,520px)] rounded-md border border-gray-200 bg-slate-50 overflow-hidden">
-              <iframe title={item.title} src={href} className="w-full h-full border-0" />
+              <iframe title={item.title} src={safeHref} className="w-full h-full border-0" />
             </div>
             <p className="text-xs text-gray-500">
               If the document does not load inside the page, use Open to view it in a new tab.
             </p>
           </div>
         )}
-        {href && item.kind === "file" && !showPdf && (
+        {safeHref && item.kind === "file" && !showPdf && (
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs text-gray-600">Lecture attachment</span>
             <a
-              href={href}
+              href={safeHref}
               target="_blank"
               rel="noopener noreferrer"
+              download
               className="inline-flex items-center gap-1.5 text-sm text-indigo-600 font-medium hover:underline"
             >
               <Download className="w-4 h-4" />
@@ -217,27 +226,6 @@ export default function StudentDashboard() {
     router.push("/login")
   }
 
-  const downloadSummary = () => {
-    if (!data) return
-    const text = JSON.stringify(
-      {
-        student: user?.name,
-        stats: data.stats,
-        attendanceSummary: data.attendanceSummary,
-        courses: data.courses,
-      },
-      null,
-      2,
-    )
-    const blob = new Blob([text], { type: "application/json" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "edutrack-attendance-summary.json"
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   return (
     <ProtectedRoute allowedRoles={["student"]}>
       <DashboardEntrance>
@@ -255,6 +243,12 @@ export default function StudentDashboard() {
               </button>
             </div>
             <div className="flex items-center gap-4">
+              <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Link href="/student/registration">Course selection</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="border-gray-300">
+                <Link href="/student/payment">Payment</Link>
+              </Button>
               <div className="text-right">
                 <p className="text-gray-900 font-medium">{user?.name}</p>
                 <p className="text-gray-500 text-xs">Student</p>
@@ -301,10 +295,6 @@ export default function StudentDashboard() {
                       <div>
                         <p className="text-gray-600 text-sm">Avg Attendance</p>
                         <p className="text-3xl font-bold text-gray-900 mt-1">{data.stats.avgAttendance}%</p>
-                        <p className="text-emerald-600 text-xs mt-2 flex items-center">
-                          <TrendingUp className="w-3 h-3 mr-1" />
-                          From recorded lectures
-                        </p>
                       </div>
                       <div className="bg-emerald-100 p-3 rounded-lg">
                         <BarChart3 className="w-6 h-6 text-emerald-600" />
@@ -319,10 +309,6 @@ export default function StudentDashboard() {
                       <div>
                         <p className="text-gray-600 text-sm">GPA</p>
                         <p className="text-3xl font-bold text-gray-900 mt-1">{data.stats.gpa}</p>
-                        <p className="text-purple-600 text-xs mt-2 flex items-center">
-                          <Award className="w-3 h-3 mr-1" />
-                          From enrollments
-                        </p>
                       </div>
                       <div className="bg-purple-100 p-3 rounded-lg">
                         <Award className="w-6 h-6 text-purple-600" />
@@ -337,10 +323,6 @@ export default function StudentDashboard() {
                       <div>
                         <p className="text-gray-600 text-sm">Upcoming Lectures</p>
                         <p className="text-3xl font-bold text-gray-900 mt-1">{data.stats.upcomingCount}</p>
-                        <p className="text-amber-600 text-xs mt-2 flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
-                          Scheduled ahead
-                        </p>
                       </div>
                       <div className="bg-amber-100 p-3 rounded-lg">
                         <Calendar className="w-6 h-6 text-amber-600" />
@@ -349,6 +331,27 @@ export default function StudentDashboard() {
                   </CardContent>
                 </Card>
               </div>
+
+              <Card className="bg-white border-gray-200 shadow-sm mb-8">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 text-base">Financial Summary</CardTitle>
+                  <CardDescription className="text-gray-600">{data.finance.semester}</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="rounded border bg-slate-50 px-3 py-2">
+                    <p className="text-xs text-slate-500">Tuition</p>
+                    <p className="font-semibold">{data.finance.tuitionAmount.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded border bg-slate-50 px-3 py-2">
+                    <p className="text-xs text-slate-500">Paid</p>
+                    <p className="font-semibold text-emerald-700">{data.finance.paidAmount.toLocaleString()}</p>
+                  </div>
+                  <div className="rounded border bg-slate-50 px-3 py-2">
+                    <p className="text-xs text-slate-500">Balance</p>
+                    <p className="font-semibold text-amber-700">{data.finance.balance.toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
 
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="mb-6 inline-flex h-auto flex-wrap gap-1 rounded-xl border border-white/80 bg-white/70 p-1.5 shadow-sm backdrop-blur-sm">
@@ -486,14 +489,6 @@ export default function StudentDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Button
-                    type="button"
-                    onClick={downloadSummary}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download attendance summary (JSON)
-                  </Button>
                 </TabsContent>
 
                 <TabsContent value="upcoming" className="space-y-4">
@@ -553,9 +548,6 @@ export default function StudentDashboard() {
 
                 <TabsContent value="materials" className="space-y-4">
                   <h2 className="text-xl font-bold text-gray-900 mb-1">Course Materials</h2>
-                  <p className="text-gray-600 text-sm mb-4">
-                    Videos and PDFs from your instructors, plus files attached to scheduled lectures.
-                  </p>
                   <div className="space-y-4">
                     {data.materialsByCourse.length === 0 && (
                       <p className="text-gray-600 text-sm">No course materials yet.</p>

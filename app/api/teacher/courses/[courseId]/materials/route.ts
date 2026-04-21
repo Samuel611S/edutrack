@@ -10,7 +10,10 @@ import {
 
 type Params = { params: Promise<{ courseId: string }> }
 
-function assertOwnCourse(db: ReturnType<typeof getDb>, courseId: string, teacherId: string) {
+function assertOwnCourse(db: ReturnType<typeof getDb>, courseId: string, teacherId: string, isAdmin: boolean) {
+  if (isAdmin) {
+    return db.prepare("SELECT id FROM courses WHERE id = ?").get(courseId) as { id: string } | undefined
+  }
   return db.prepare("SELECT id FROM courses WHERE id = ? AND teacher_id = ?").get(courseId, teacherId) as
     | { id: string }
     | undefined
@@ -19,11 +22,11 @@ function assertOwnCourse(db: ReturnType<typeof getDb>, courseId: string, teacher
 export async function GET(_request: NextRequest, context: Params) {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "teacher") return forbidden()
+  if (session.role !== "teacher" && session.role !== "admin") return forbidden()
 
   const { courseId } = await context.params
   const db = getDb()
-  if (!assertOwnCourse(db, courseId, session.sub)) {
+  if (!assertOwnCourse(db, courseId, session.sub, session.role === "admin")) {
     return NextResponse.json({ message: "Course not found" }, { status: 404 })
   }
 
@@ -34,11 +37,11 @@ export async function GET(_request: NextRequest, context: Params) {
 export async function POST(request: NextRequest, context: Params) {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "teacher") return forbidden()
+  if (session.role !== "teacher" && session.role !== "admin") return forbidden()
 
   const { courseId } = await context.params
   const db = getDb()
-  if (!assertOwnCourse(db, courseId, session.sub)) {
+  if (!assertOwnCourse(db, courseId, session.sub, session.role === "admin")) {
     return NextResponse.json({ message: "Course not found" }, { status: 404 })
   }
 

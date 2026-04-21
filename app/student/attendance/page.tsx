@@ -2,7 +2,7 @@
 
 import { ProtectedRoute } from "@/components/protected-route"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MapPin, Clock, CheckCircle, AlertCircle, Loader2, Radio } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -57,6 +57,7 @@ export default function AttendancePage() {
   const [isInside, setIsInside] = useState<boolean | null>(null)
   const [tick, setTick] = useState(0)
   const [hadSampleDuring, setHadSampleDuring] = useState(false)
+  const [checkedIn, setCheckedIn] = useState(false)
 
   const trackingRef = useRef(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -126,6 +127,31 @@ export default function AttendancePage() {
           : "after"
       : "unknown"
 
+  useEffect(() => {
+    if (!currentLecture || !bounds || !Number.isFinite(bounds.startMs)) return
+    const shouldTrack = checkedIn && phase === "during"
+    if (shouldTrack && !trackingRef.current) {
+      hadSampleDuringLectureRef.current = false
+      setHadSampleDuring(false)
+      lastSampleAtRef.current = null
+      lastWasOutsideRef.current = false
+      outsideSecRef.current = 0
+      setOutsideSec(0)
+      setLastDistance(null)
+      setIsInside(null)
+      setTracking(true)
+      setError("")
+      setSuccess("")
+    } else if (!shouldTrack && trackingRef.current) {
+      setTracking(false)
+      trackingRef.current = false
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+  }, [phase, currentLecture, bounds, checkedIn])
+
   const processPosition = useCallback(
     (latitude: number, longitude: number) => {
       if (!currentLecture || !bounds || !Number.isFinite(bounds.startMs)) return
@@ -169,13 +195,27 @@ export default function AttendancePage() {
         pollInFlightRef.current = false
         const { latitude, longitude } = position.coords
         processPosition(latitude, longitude)
+        if (checkedIn && currentLecture) {
+          void fetch("/api/attendance/mark", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              mode: "track",
+              lectureId: currentLecture.id,
+              latitude,
+              longitude,
+              outsideRadiusSeconds: Math.round(outsideSecRef.current),
+            }),
+          }).catch(() => {})
+        }
       },
       () => {
         pollInFlightRef.current = false
       },
       { enableHighAccuracy: true, maximumAge: 8000, timeout: 12_000 },
     )
-  }, [currentLecture, processPosition])
+  }, [currentLecture, processPosition, checkedIn])
 
   useEffect(() => {
     if (!tracking || !currentLecture) return
@@ -199,54 +239,21 @@ export default function AttendancePage() {
     }
   }, [tracking, currentLecture, bounds, runPoll])
 
-  const startTracking = () => {
-    setError("")
-    setSuccess("")
-    if (!navigator.geolocation) {
-      setIsLocationSupported(false)
-      setError("Geolocation is not supported by your browser.")
-      return
-    }
-    hadSampleDuringLectureRef.current = false
-    setHadSampleDuring(false)
-    lastSampleAtRef.current = null
-    lastWasOutsideRef.current = false
-    outsideSecRef.current = 0
-    setOutsideSec(0)
-    setLastDistance(null)
-    setIsInside(null)
-    setTracking(true)
-  }
-
-  const stopTracking = () => {
-    setTracking(false)
-    trackingRef.current = false
-    if (pollRef.current) {
-      clearInterval(pollRef.current)
-      pollRef.current = null
-    }
-  }
-
-  const markAttendance = async () => {
+  const checkIn = async () => {
     if (!currentLecture || !bounds || !Number.isFinite(bounds.startMs)) {
       setError("Lecture schedule is not available.")
       return
     }
 
-    if (Date.now() < bounds.endMs) {
-      setError("You can submit attendance only after the lecture end time.")
+    const now = Date.now()
+    const lateCutoff = bounds.startMs + 10 * 60 * 1000
+    if (now > lateCutoff) {
+      setError("Check-in window is closed for this lecture.")
       return
     }
 
-    if (!hadSampleDuringLectureRef.current) {
-      setError("Start location tracking during the lecture so your time on campus can be recorded.")
-      return
-    }
-
-    if (outsideSecRef.current > MAX_OUTSIDE_SEC + 0.5) {
-      setError(
-        `You were outside the allowed area for more than ${MAX_OUTSIDE_SEC / 60} minutes during the lecture. Attendance cannot be marked.`,
-      )
+    if (now > bounds.endMs) {
+      setError("Lecture has ended. Check-in is closed.")
       return
     }
 
@@ -286,7 +293,7 @@ export default function AttendancePage() {
               lectureId: currentLecture.id,
               latitude,
               longitude,
-              outsideRadiusSeconds: Math.round(outsideSecRef.current),
+                mode: "checkin",
             }),
           })
 
@@ -298,13 +305,10 @@ export default function AttendancePage() {
             return
           }
 
-          setSuccess("Attendance marked successfully!")
-          stopTracking()
-          setTimeout(() => {
-            router.push("/student/dashboard")
-          }, 2000)
+          setSuccess("Check-in successful. Tracking will run automatically during lecture.")
+          setCheckedIn(true)
         } catch {
-          setError("An error occurred while marking attendance")
+          setError("An error occurred while checking in")
         } finally {
           setLoading(false)
         }
@@ -340,7 +344,6 @@ export default function AttendancePage() {
           <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Mark Attendance</h1>
-              <p className="text-gray-600 text-sm">Location tracking during the lecture</p>
             </div>
             <Button
               onClick={() => router.push("/student/dashboard")}
@@ -388,7 +391,7 @@ export default function AttendancePage() {
                     <div>
                       <p className="text-gray-600 text-sm">Lecture time</p>
                       <p className="text-gray-900 font-medium">{timeLabel || "—"}</p>
-                      <p className="text-gray-500 text-xs mt-0.5">Scheduled length: {durationLabel}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{durationLabel}</p>
                     </div>
                   </div>
 
@@ -405,19 +408,10 @@ export default function AttendancePage() {
                     <p className="text-gray-900 font-semibold">{currentLecture.allowed_radius_m} m from lecture GPS</p>
                   </div>
 
-                  <p className="text-xs text-gray-600 rounded-lg border border-gray-100 bg-gray-50 p-3">
-                    <span className="font-semibold text-gray-800">Session rule:</span> During the scheduled lecture, your
-                    phone reports location about every {POLL_MS / 1000} seconds. Time spent{" "}
-                    <strong>outside</strong> that radius is added up. You may be outside the area for at most{" "}
-                    <strong>{MAX_OUTSIDE_SEC / 60} minutes total</strong>. After the lecture ends, submit here while you
-                    are back inside the radius.
-                  </p>
-
                   <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-2">
-                    Status:{" "}
-                    {phase === "before" && "Before lecture — you can start tracking early."}
-                    {phase === "during" && "Lecture in progress — keep tracking on."}
-                    {phase === "after" && "Lecture ended — submit attendance if you meet the rules."}
+                    {phase === "before" && "Before lecture"}
+                    {phase === "during" && "Lecture in progress"}
+                    {phase === "after" && "Lecture ended"}
                   </p>
                 </CardContent>
               </Card>
@@ -428,10 +422,6 @@ export default function AttendancePage() {
                     <Radio className="w-5 h-5 text-indigo-600" />
                     Lecture location tracking
                   </CardTitle>
-                  <CardDescription className="text-gray-600">
-                    Start before or during class. Leave this page open or return before the end; sampling pauses when you
-                    stop tracking.
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {!isLocationSupported && (
@@ -455,39 +445,27 @@ export default function AttendancePage() {
                     </div>
                   )}
 
-                  <div className="flex flex-wrap gap-2">
-                    {!tracking ? (
-                      <Button
-                        type="button"
-                        onClick={startTracking}
-                        disabled={!isLocationSupported}
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white"
-                      >
-                        <Radio className="w-4 h-4 mr-2" />
-                        Start tracking
-                      </Button>
-                    ) : (
-                      <Button type="button" onClick={stopTracking} variant="outline">
-                        Stop tracking
-                      </Button>
-                    )}
-                  </div>
+                  {!checkedIn && (
+                    <Button type="button" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={checkIn} disabled={loading}>
+                      Check in
+                    </Button>
+                  )}
 
-                  {tracking && (
+                  {tracking && checkedIn && (
                     <p className="text-sm text-indigo-700 flex items-center gap-2">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600" />
                       </span>
-                      Live — next sample about every {POLL_MS / 1000}s
+                      Live
                     </p>
                   )}
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Time outside radius (during lecture window)</span>
+                      <span className="text-gray-600">Time outside radius</span>
                       <span className={outsideOver ? "font-bold text-red-600" : "font-semibold text-gray-900"}>
-                        {Math.floor(outsideSec / 60)}m {Math.round(outsideSec % 60)}s / {MAX_OUTSIDE_SEC / 60}m max
+                        {Math.floor(outsideSec / 60)}m {Math.round(outsideSec % 60)}s
                       </span>
                     </div>
                     <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
@@ -496,11 +474,7 @@ export default function AttendancePage() {
                         style={{ width: `${Math.min(100, (outsideSec / MAX_OUTSIDE_SEC) * 100)}%` }}
                       />
                     </div>
-                    {outsideOver && (
-                      <p className="text-sm text-red-600 font-medium">
-                        Maximum exceeded — attendance cannot be submitted for this session.
-                      </p>
-                    )}
+                    {outsideOver && <p className="text-sm text-red-600 font-medium">Teacher confirmation required.</p>}
                   </div>
 
                   {lastDistance != null && (
@@ -509,46 +483,30 @@ export default function AttendancePage() {
                         isInside ? "bg-emerald-50 border border-emerald-200 text-emerald-900" : "bg-red-50 border border-red-200 text-red-900"
                       }`}
                     >
-                      Last reading: {lastDistance} m from lecture pin — {isInside ? "inside area" : "outside area"}
+                      {lastDistance} m - {isInside ? "inside area" : "outside area"}
                     </div>
                   )}
                 </CardContent>
               </Card>
 
               <Button
-                onClick={markAttendance}
-                disabled={!canSubmit}
+                onClick={() => router.push("/student/dashboard")}
+                disabled={loading}
                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed text-lg py-6"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Submitting…
+                    Processing…
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-5 h-5 mr-2" />
-                    Submit attendance
+                    Back to dashboard
                   </>
                 )}
               </Button>
 
-              <p className="text-center text-xs text-gray-500 mt-2">
-                Submit is enabled after the lecture end time, with at least one GPS sample during class and ≤{" "}
-                {MAX_OUTSIDE_SEC / 60} minutes total outside the radius.
-              </p>
-
-              <Card className="bg-white border-gray-200 shadow-sm mt-6">
-                <CardHeader>
-                  <CardTitle className="text-gray-900 text-sm">How it works</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-gray-600">
-                  <p>1. Tap Start tracking — the app checks your position about every {POLL_MS / 1000} seconds.</p>
-                  <p>2. Only the scheduled lecture window counts toward &quot;time outside&quot; the radius.</p>
-                  <p>3. If that total goes over {MAX_OUTSIDE_SEC / 60} minutes, you cannot submit.</p>
-                  <p>4. After class ends, tap Submit while you are inside the radius; the server checks again.</p>
-                </CardContent>
-              </Card>
             </>
           )}
         </div>

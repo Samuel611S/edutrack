@@ -5,7 +5,7 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardEntrance } from "@/components/dashboard-entrance"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, BookOpen, BarChart3, LogOut, FileText, TrendingUp, Clock } from "lucide-react"
+import { Users, BookOpen, BarChart3, LogOut, FileText } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -78,10 +78,6 @@ export default function AdminDashboard() {
                       <div>
                         <p className="text-gray-600 text-sm">Total Students</p>
                         <p className="text-3xl font-bold text-gray-900 mt-1">{data.stats.students}</p>
-                        <p className="text-emerald-600 text-xs mt-2 flex items-center">
-                          <TrendingUp className="w-3 h-3 mr-1" />
-                          In database
-                        </p>
                       </div>
                       <div className="bg-emerald-100 p-3 rounded-lg">
                         <Users className="w-6 h-6 text-emerald-600" />
@@ -110,10 +106,6 @@ export default function AdminDashboard() {
                       <div>
                         <p className="text-gray-600 text-sm">Avg Attendance</p>
                         <p className="text-3xl font-bold text-gray-900 mt-1">{data.stats.avgAttendance}%</p>
-                        <p className="text-amber-600 text-xs mt-2 flex items-center">
-                          <Clock className="w-3 h-3 mr-1" />
-                          All records
-                        </p>
                       </div>
                       <div className="bg-amber-100 p-3 rounded-lg">
                         <BarChart3 className="w-6 h-6 text-amber-600" />
@@ -143,7 +135,6 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-gray-900">Manage Students</CardTitle>
-                        <CardDescription className="text-gray-600">Add and list student accounts</CardDescription>
                       </div>
                       <Users className="w-8 h-8 text-emerald-600" />
                     </div>
@@ -159,8 +150,23 @@ export default function AdminDashboard() {
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between">
                       <div>
+                        <CardTitle className="text-gray-900">Course Requests</CardTitle>
+                      </div>
+                      <FileText className="w-8 h-8 text-indigo-600" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" asChild>
+                      <Link href="/admin/requests">Open Requests</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-200/60 hover:-translate-y-0.5 cursor-pointer">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
                         <CardTitle className="text-gray-900">Manage Teachers</CardTitle>
-                        <CardDescription className="text-gray-600">Add and list teacher accounts</CardDescription>
                       </div>
                       <BookOpen className="w-8 h-8 text-blue-600" />
                     </div>
@@ -177,7 +183,6 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-gray-900">Attendance Reports</CardTitle>
-                        <CardDescription className="text-gray-600">Export system-wide attendance</CardDescription>
                       </div>
                       <BarChart3 className="w-8 h-8 text-amber-600" />
                     </div>
@@ -194,7 +199,6 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-gray-900">Manage Courses</CardTitle>
-                        <CardDescription className="text-gray-600">Create courses and assign teachers</CardDescription>
                       </div>
                       <FileText className="w-8 h-8 text-purple-600" />
                     </div>
@@ -211,7 +215,6 @@ export default function AdminDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-gray-900">Campus Map</CardTitle>
-                        <CardDescription className="text-gray-600">Locations and GPS reference map</CardDescription>
                       </div>
                       <Users className="w-8 h-8 text-pink-600" />
                     </div>
@@ -227,7 +230,6 @@ export default function AdminDashboard() {
               <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5">
                 <CardHeader>
                   <CardTitle className="text-gray-900">Recent Activity</CardTitle>
-                  <CardDescription className="text-gray-600">Latest attendance events</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">

@@ -4,7 +4,7 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { DashboardEntrance } from "@/components/dashboard-entrance"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Download, FileJson, PieChart, ArrowLeft, Sparkles } from "lucide-react"
+import { Download, PieChart, ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 
@@ -40,16 +40,12 @@ export default function TeacherReportsPage() {
   }, [])
 
   return (
-    <ProtectedRoute allowedRoles={["teacher"]}>
+    <ProtectedRoute allowedRoles={["teacher", "admin"]}>
       <DashboardEntrance>
         <main className="min-h-screen edu-dashboard-bg">
           <header className="edu-dashboard-header sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-md shadow-sm">
             <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-medium uppercase tracking-widest text-indigo-600 flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Your classes
-                </p>
                 <h1 className="text-2xl font-bold text-gray-900">Attendance reports</h1>
               </div>
               <Button variant="outline" size="sm" asChild>
@@ -100,12 +96,6 @@ export default function TeacherReportsPage() {
                       Export my CSV
                     </a>
                   </Button>
-                  <Button variant="outline" asChild className="bg-white">
-                    <Link href="/api/teacher/reports/attendance" target="_blank" className="gap-2">
-                      <FileJson className="w-4 h-4" />
-                      JSON preview
-                    </Link>
-                  </Button>
                 </div>
 
                 <Card className="bg-white/95 shadow-lg border-white/80">
@@ -114,7 +104,6 @@ export default function TeacherReportsPage() {
                       <PieChart className="w-5 h-5 text-indigo-600" />
                       <CardTitle className="text-lg">Per course</CardTitle>
                     </div>
-                    <CardDescription>Attendance across your assigned sections</CardDescription>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
@@ -131,9 +120,7 @@ export default function TeacherReportsPage() {
                         <tbody>
                           {byCourse.length === 0 && (
                             <tr>
-                              <td colSpan={5} className="py-10 text-center text-slate-500">
-                                No attendance rows yet for your courses.
-                              </td>
+                              <td colSpan={5} className="py-10 text-center text-slate-500">No records.</td>
                             </tr>
                           )}
                           {byCourse.map((r) => (
@@ -158,7 +145,6 @@ export default function TeacherReportsPage() {
                 <Card className="bg-white/95 shadow-lg">
                   <CardHeader>
                     <CardTitle className="text-lg">Sample rows</CardTitle>
-                    <CardDescription>Up to 250 recent rows — use CSV for full export</CardDescription>
                   </CardHeader>
                   <CardContent className="overflow-x-auto max-h-[320px] overflow-y-auto p-0 sm:p-6 pt-0">
                     <table className="w-full text-sm min-w-[720px]">

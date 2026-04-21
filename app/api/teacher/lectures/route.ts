@@ -7,7 +7,7 @@ import { LECTURE_DURATION_MINUTES, minutesBetweenSameDay } from "@/lib/lecture-d
 export async function POST(request: NextRequest) {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "teacher") return forbidden()
+  if (session.role !== "teacher" && session.role !== "admin") return forbidden()
 
   const body = await request.json()
   const {
@@ -42,9 +42,11 @@ export async function POST(request: NextRequest) {
   }
 
   const db = getDb()
-  const course = db
-    .prepare("SELECT id FROM courses WHERE id = ? AND teacher_id = ?")
-    .get(courseId, session.sub) as { id: string } | undefined
+  const course = session.role === "admin"
+    ? (db.prepare("SELECT id FROM courses WHERE id = ?").get(courseId) as { id: string } | undefined)
+    : (db.prepare("SELECT id FROM courses WHERE id = ? AND teacher_id = ?").get(courseId, session.sub) as
+        | { id: string }
+        | undefined)
   if (!course) return NextResponse.json({ message: "Course not found" }, { status: 404 })
 
   const id = `lec_${randomUUID().slice(0, 12)}`

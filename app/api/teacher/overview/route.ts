@@ -5,20 +5,21 @@ import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 export async function GET() {
   const session = await getSessionUser()
   if (!session) return unauthorized()
-  if (session.role !== "teacher") return forbidden()
+  if (session.role !== "teacher" && session.role !== "admin") return forbidden()
 
   const db = getDb()
   const tid = session.sub
+  const allAccess = session.role === "admin"
 
   const courses = db
     .prepare(
       `SELECT c.id, c.course_code, c.course_name, c.semester, c.credits, c.max_capacity, c.description,
               (SELECT COUNT(*) FROM course_enrollments e WHERE e.course_id = c.id) AS students
        FROM courses c
-       WHERE c.teacher_id = ?
+       WHERE (? = 1 OR c.teacher_id = ?)
        ORDER BY c.course_code`,
     )
-    .all(tid) as {
+    .all(allAccess ? 1 : 0, tid) as {
     id: string
     course_code: string
     course_name: string
@@ -55,10 +56,10 @@ export async function GET() {
               (SELECT COUNT(*) FROM attendance a WHERE a.lecture_id = l.id AND a.status = 'present') AS attended
        FROM lectures l
        JOIN courses c ON c.id = l.course_id
-       WHERE c.teacher_id = ?
+       WHERE (? = 1 OR c.teacher_id = ?)
        ORDER BY l.lecture_date DESC, l.start_time DESC`,
     )
-    .all(tid) as {
+    .all(allAccess ? 1 : 0, tid) as {
     id: string
     lecture_date: string
     start_time: string
@@ -90,10 +91,10 @@ export async function GET() {
        FROM course_enrollments e
        JOIN students s ON s.id = e.student_id
        JOIN courses c ON c.id = e.course_id
-       WHERE c.teacher_id = ?
+       WHERE (? = 1 OR c.teacher_id = ?)
        ORDER BY e.course_id, s.full_name`,
     )
-    .all(tid) as {
+    .all(allAccess ? 1 : 0, tid) as {
     enrollment_id: string
     grade: string | null
     student_id: string
