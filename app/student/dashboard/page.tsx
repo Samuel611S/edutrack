@@ -240,9 +240,6 @@ export default function StudentDashboard() {
             </div>
             <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
               <Button asChild size="sm" variant="outline" className="border-gray-300">
-                <Link href="/campus-map">Campus map</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="border-gray-300">
                 <Link href="/student/assessments">Assessments</Link>
               </Button>
               <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">

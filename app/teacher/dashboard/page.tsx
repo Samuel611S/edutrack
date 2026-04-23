@@ -546,9 +546,6 @@ export default function TeacherDashboard() {
               </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
               <Button asChild size="sm" variant="outline" className="border-gray-300">
-                <Link href="/campus-map">Campus map</Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="border-gray-300">
                 <Link href="/teacher/assessments">Assessments</Link>
               </Button>
               <Button
