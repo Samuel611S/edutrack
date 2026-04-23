@@ -184,6 +184,105 @@ function migrate(db: Database.Database) {
       WHERE course_code LIKE 'EDU%';
     `)
   }
+
+  // =====================
+  // Assessments (Quizzes + Assignments)
+  // =====================
+  if (!tableExists(db, "quizzes")) {
+    db.exec(`
+      CREATE TABLE quizzes (
+        id TEXT PRIMARY KEY,
+        course_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        open_at TIMESTAMP,
+        due_at TIMESTAMP,
+        created_by TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_quizzes_course_id ON quizzes(course_id);
+    `)
+  }
+  if (!tableExists(db, "quiz_questions")) {
+    db.exec(`
+      CREATE TABLE quiz_questions (
+        id TEXT PRIMARY KEY,
+        quiz_id TEXT NOT NULL,
+        prompt TEXT NOT NULL,
+        options_json TEXT NOT NULL,
+        correct_index INTEGER NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_quiz_questions_quiz_id ON quiz_questions(quiz_id);
+    `)
+  }
+  if (!tableExists(db, "quiz_attempts")) {
+    db.exec(`
+      CREATE TABLE quiz_attempts (
+        id TEXT PRIMARY KEY,
+        quiz_id TEXT NOT NULL,
+        student_id TEXT NOT NULL,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        answers_json TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        max_score INTEGER NOT NULL,
+        UNIQUE(quiz_id, student_id),
+        FOREIGN KEY (quiz_id) REFERENCES quizzes(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_quiz_attempts_quiz_id ON quiz_attempts(quiz_id);
+      CREATE INDEX IF NOT EXISTS idx_quiz_attempts_student_id ON quiz_attempts(student_id);
+    `)
+  }
+
+  if (!tableExists(db, "assignments")) {
+    db.exec(`
+      CREATE TABLE assignments (
+        id TEXT PRIMARY KEY,
+        course_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        due_at TIMESTAMP,
+        created_by TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_assignments_course_id ON assignments(course_id);
+    `)
+  }
+  if (!tableExists(db, "assignment_submissions")) {
+    db.exec(`
+      CREATE TABLE assignment_submissions (
+        id TEXT PRIMARY KEY,
+        assignment_id TEXT NOT NULL,
+        student_id TEXT NOT NULL,
+        note TEXT,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(assignment_id, student_id),
+        FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_assignment_submissions_assignment_id ON assignment_submissions(assignment_id);
+      CREATE INDEX IF NOT EXISTS idx_assignment_submissions_student_id ON assignment_submissions(student_id);
+    `)
+  }
+  if (!tableExists(db, "submission_files")) {
+    db.exec(`
+      CREATE TABLE submission_files (
+        id TEXT PRIMARY KEY,
+        submission_id TEXT NOT NULL,
+        filename TEXT NOT NULL,
+        mime_type TEXT,
+        size_bytes INTEGER NOT NULL,
+        data BLOB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (submission_id) REFERENCES assignment_submissions(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_submission_files_submission_id ON submission_files(submission_id);
+    `)
+  }
 }
 
 export function getDb(): Database.Database {

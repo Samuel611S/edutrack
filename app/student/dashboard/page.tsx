@@ -231,18 +231,20 @@ export default function StudentDashboard() {
       <DashboardEntrance>
         <main className="min-h-screen edu-dashboard-bg">
           <header className="edu-dashboard-header sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-md shadow-sm shadow-indigo-950/5">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Student Portal</h1>
-              <button
-                type="button"
-                className="mt-1 text-sm text-blue-600 hover:underline"
-                onClick={() => router.push("/student/attendance")}
-              >
+              <Link href="/student/attendance" className="mt-1 inline-block text-sm text-blue-600 hover:underline">
                 Quick check-in
-              </button>
+              </Link>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+              <Button asChild size="sm" variant="outline" className="border-gray-300">
+                <Link href="/campus-map">Campus map</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="border-gray-300">
+                <Link href="/student/assessments">Assessments</Link>
+              </Button>
               <Button asChild size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white">
                 <Link href="/student/registration">Course selection</Link>
               </Button>

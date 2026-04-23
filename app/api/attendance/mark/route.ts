@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db"
 import { getSessionUser, forbidden, unauthorized } from "@/lib/api-auth"
 import { haversineMeters } from "@/lib/geo"
 import { randomUUID } from "node:crypto"
+import { getSectionPolygonByKey, lectureLocationToSectionKey, pointInPolygon } from "@/lib/campus-sections"
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     const db = getDb()
     const lecture = db
       .prepare(
-        `SELECT l.id, l.latitude, l.longitude, l.allowed_radius_m, l.lecture_date, l.start_time, l.end_time, c.id as course_id
+        `SELECT l.id, l.location, l.latitude, l.longitude, l.allowed_radius_m, l.lecture_date, l.start_time, l.end_time, c.id as course_id
          FROM lectures l
          JOIN courses c ON c.id = l.course_id
          JOIN course_enrollments e ON e.course_id = c.id AND e.student_id = ?
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
       .get(session.sub, lectureId) as
       | {
           id: string
+          location: string | null
           latitude: number | null
           longitude: number | null
           allowed_radius_m: number | null
@@ -75,6 +77,20 @@ export async function POST(request: NextRequest) {
           verifiedLocation: false,
           distanceMeters: Math.round(distance),
         },
+        { status: 403 },
+      )
+    }
+
+    // Section-only enforcement: must be inside the mapped section polygon.
+    // If we can't map, fall back to the "building" section (if present).
+    const sectionKeyRaw = lecture.location ? lectureLocationToSectionKey(lecture.location) : null
+    const sectionKey = sectionKeyRaw ?? "building"
+    const sectionPoly = getSectionPolygonByKey(sectionKey)
+    const insideSection = sectionPoly ? pointInPolygon(latitude, longitude, sectionPoly) : false
+
+    if (action === "checkin" && insideSection === false) {
+      return NextResponse.json(
+        { message: `You must be inside the required section (${lecture.location || sectionKey}) to check in.` },
         { status: 403 },
       )
     }
@@ -153,6 +169,7 @@ export async function POST(request: NextRequest) {
     } else if (existing) {
       const nextStatus = outsideSec > 600 ? "absent" : "present"
       const locationOk = distance <= radius ? 1 : 0
+      const sectionOk = insideSection === null ? 1 : insideSection ? 1 : 0
       db.prepare(
         `UPDATE attendance SET
           check_in_time = COALESCE(check_in_time, datetime('now')),
@@ -167,14 +184,14 @@ export async function POST(request: NextRequest) {
           status = ?
         WHERE lecture_id = ? AND student_id = ?`,
       ).run(
-        locationOk,
+        locationOk && sectionOk ? 1 : 0,
         latitude,
         longitude,
         Math.round(distance * 100) / 100,
         faceOk ? 1 : 0,
         timeSec,
         outsideSec,
-        nextStatus,
+        sectionOk ? nextStatus : "absent",
         lectureId,
         session.sub,
       )

@@ -2,11 +2,12 @@
 
 import { ProtectedRoute } from "@/components/protected-route"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MapPin, Clock, CheckCircle, AlertCircle, Loader2, Radio } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { formatDurationMs, parseLectureBounds } from "@/lib/lecture-window"
+import { getSectionPolygonByKey, lectureLocationToSectionKey, pointInPolygon } from "@/lib/campus-sections"
 
 const POLL_MS = 15_000
 const MAX_OUTSIDE_SEC = 600
@@ -284,6 +285,14 @@ export default function AttendancePage() {
           return
         }
 
+        const sectionKey = lectureLocationToSectionKey(currentLecture.location) ?? "building"
+        const sectionPoly = getSectionPolygonByKey(sectionKey)
+        if (!sectionPoly || !pointInPolygon(latitude, longitude, sectionPoly)) {
+          setError(`You must be inside the required section (${currentLecture.location || sectionKey}) to check in.`)
+          setLoading(false)
+          return
+        }
+
         try {
           const response = await fetch("/api/attendance/mark", {
             method: "POST",
@@ -341,15 +350,15 @@ export default function AttendancePage() {
     <ProtectedRoute allowedRoles={["student"]}>
       <main className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-          <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="max-w-3xl mx-auto px-4 py-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Mark Attendance</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Mark Attendance</h1>
             </div>
             <Button
               onClick={() => router.push("/student/dashboard")}
               variant="outline"
               size="sm"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              className="w-full sm:w-auto border-gray-300 text-gray-700 hover:bg-gray-100"
             >
               Back
             </Button>
@@ -446,7 +455,12 @@ export default function AttendancePage() {
                   )}
 
                   {!checkedIn && (
-                    <Button type="button" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={checkIn} disabled={loading}>
+                    <Button
+                      type="button"
+                      className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
+                      onClick={checkIn}
+                      disabled={loading}
+                    >
                       Check in
                     </Button>
                   )}

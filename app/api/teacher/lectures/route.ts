@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { randomUUID } from "node:crypto"
 import { getDb } from "@/lib/db"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
-import { LECTURE_DURATION_MINUTES, minutesBetweenSameDay } from "@/lib/lecture-duration"
+import { minutesBetweenSameDay } from "@/lib/lecture-duration"
 
 export async function POST(request: NextRequest) {
   const session = await getSessionUser()
@@ -32,10 +32,11 @@ export async function POST(request: NextRequest) {
   }
 
   const duration = minutesBetweenSameDay(st, et)
-  if (duration === null || duration !== LECTURE_DURATION_MINUTES) {
+  // Teachers can choose any duration, as long as it's same-day and reasonable.
+  if (duration === null || duration <= 0 || duration > 6 * 60) {
     return NextResponse.json(
       {
-        message: `Lecture must be exactly ${LECTURE_DURATION_MINUTES} minutes on the same day (e.g. 10:00–11:30). Adjust times or use the teacher form defaults.`,
+        message: "Lecture time must be valid on the same day (end after start).",
       },
       { status: 400 },
     )

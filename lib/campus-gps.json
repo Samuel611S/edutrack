@@ -60,6 +60,391 @@
       "latitude": 30.15577089762507,
       "longitude": 31.61415449852636,
       "type": "building"
+    },
+    {
+      "id": "section_a1",
+      "name": "Section A1",
+      "latitude": 30.15552,
+      "longitude": 31.61395,
+      "type": "building"
+    },
+    {
+      "id": "section_b1",
+      "name": "Section B1",
+      "latitude": 30.15554,
+      "longitude": 31.613965,
+      "type": "building"
+    },
+    {
+      "id": "section_c1",
+      "name": "Section C1",
+      "latitude": 30.155565,
+      "longitude": 31.613985,
+      "type": "building"
+    },
+    {
+      "id": "section_d1",
+      "name": "Section D1",
+      "latitude": 30.15559,
+      "longitude": 31.614005,
+      "type": "building"
+    },
+    {
+      "id": "section_e1",
+      "name": "Section E1",
+      "latitude": 30.15562,
+      "longitude": 31.614025,
+      "type": "building"
+    },
+    {
+      "id": "section_f1",
+      "name": "Section F1",
+      "latitude": 30.15565,
+      "longitude": 31.614045,
+      "type": "building"
+    },
+    {
+      "id": "section_g1",
+      "name": "Section G1",
+      "latitude": 30.155685,
+      "longitude": 31.61407,
+      "type": "building"
+    },
+    {
+      "id": "section_h1",
+      "name": "Section H1",
+      "latitude": 30.15572,
+      "longitude": 31.614095,
+      "type": "building"
+    },
+    {
+      "id": "section_i1",
+      "name": "Section I1",
+      "latitude": 30.155755,
+      "longitude": 31.61412,
+      "type": "building"
+    },
+    {
+      "id": "section_j1",
+      "name": "Section J1",
+      "latitude": 30.15579,
+      "longitude": 31.61415,
+      "type": "building"
+    },
+    {
+      "id": "section_k1",
+      "name": "Section K1",
+      "latitude": 30.155825,
+      "longitude": 31.614185,
+      "type": "building"
+    },
+    {
+      "id": "section_l1",
+      "name": "Section L1",
+      "latitude": 30.15586,
+      "longitude": 31.61422,
+      "type": "building"
+    },
+    {
+      "id": "section_m1",
+      "name": "Section M1",
+      "latitude": 30.155895,
+      "longitude": 31.614255,
+      "type": "building"
+    },
+    {
+      "id": "section_n1",
+      "name": "Section N1",
+      "latitude": 30.155925,
+      "longitude": 31.6143,
+      "type": "building"
+    },
+    {
+      "id": "section_o1",
+      "name": "Section O1",
+      "latitude": 30.155955,
+      "longitude": 31.614345,
+      "type": "building"
+    },
+    {
+      "id": "section_p1",
+      "name": "Section P1",
+      "latitude": 30.15598,
+      "longitude": 31.61439,
+      "type": "building"
+    },
+    {
+      "id": "section_q1",
+      "name": "Section Q1",
+      "latitude": 30.156005,
+      "longitude": 31.61444,
+      "type": "building"
+    },
+    {
+      "id": "section_r1",
+      "name": "Section R1",
+      "latitude": 30.156025,
+      "longitude": 31.61449,
+      "type": "building"
+    },
+    {
+      "id": "section_s1",
+      "name": "Section S1",
+      "latitude": 30.15604,
+      "longitude": 31.61454,
+      "type": "building"
+    },
+    {
+      "id": "section_t1",
+      "name": "Section T1",
+      "latitude": 30.156045,
+      "longitude": 31.6146,
+      "type": "building"
+    },
+    {
+      "id": "section_u1",
+      "name": "Section U1",
+      "latitude": 30.156035,
+      "longitude": 31.61466,
+      "type": "building"
+    },
+    {
+      "id": "section_v1",
+      "name": "Section V1",
+      "latitude": 30.15602,
+      "longitude": 31.61471,
+      "type": "building"
+    },
+    {
+      "id": "section_w1",
+      "name": "Section W1",
+      "latitude": 30.155995,
+      "longitude": 31.61476,
+      "type": "building"
+    },
+    {
+      "id": "section_x1",
+      "name": "Section X1",
+      "latitude": 30.15596,
+      "longitude": 31.6148,
+      "type": "building"
+    },
+    {
+      "id": "section_y1",
+      "name": "Section Y1",
+      "latitude": 30.15592,
+      "longitude": 31.61483,
+      "type": "building"
+    },
+    {
+      "id": "section_z1",
+      "name": "Section Z1",
+      "latitude": 30.15588,
+      "longitude": 31.61485,
+      "type": "building"
+    },
+    {
+      "id": "section_a2",
+      "name": "Section A2",
+      "latitude": 30.15583,
+      "longitude": 31.61486,
+      "type": "building"
+    },
+    {
+      "id": "section_b2",
+      "name": "Section B2",
+      "latitude": 30.15578,
+      "longitude": 31.61485,
+      "type": "building"
+    },
+    {
+      "id": "section_c2",
+      "name": "Section C2",
+      "latitude": 30.15573,
+      "longitude": 31.61483,
+      "type": "building"
+    },
+    {
+      "id": "section_d2",
+      "name": "Section D2",
+      "latitude": 30.15568,
+      "longitude": 31.6148,
+      "type": "building"
+    },
+    {
+      "id": "section_e2",
+      "name": "Section E2",
+      "latitude": 30.15563,
+      "longitude": 31.61476,
+      "type": "building"
+    },
+    {
+      "id": "section_f2",
+      "name": "Section F2",
+      "latitude": 30.15559,
+      "longitude": 31.61472,
+      "type": "building"
+    },
+    {
+      "id": "section_g2",
+      "name": "Section G2",
+      "latitude": 30.15555,
+      "longitude": 31.61468,
+      "type": "building"
+    },
+    {
+      "id": "section_h2",
+      "name": "Section H2",
+      "latitude": 30.155515,
+      "longitude": 31.61463,
+      "type": "building"
+    },
+    {
+      "id": "section_i2",
+      "name": "Section I2",
+      "latitude": 30.15549,
+      "longitude": 31.61458,
+      "type": "building"
+    },
+    {
+      "id": "section_j2",
+      "name": "Section J2",
+      "latitude": 30.15547,
+      "longitude": 31.61452,
+      "type": "building"
+    },
+    {
+      "id": "section_k2",
+      "name": "Section K2",
+      "latitude": 30.155455,
+      "longitude": 31.61446,
+      "type": "building"
+    },
+    {
+      "id": "section_l2",
+      "name": "Section L2",
+      "latitude": 30.155445,
+      "longitude": 31.6144,
+      "type": "building"
+    },
+    {
+      "id": "section_m2",
+      "name": "Section M2",
+      "latitude": 30.15544,
+      "longitude": 31.61434,
+      "type": "building"
+    },
+    {
+      "id": "section_n2",
+      "name": "Section N2",
+      "latitude": 30.155445,
+      "longitude": 31.61428,
+      "type": "building"
+    },
+    {
+      "id": "section_o2",
+      "name": "Section O2",
+      "latitude": 30.15546,
+      "longitude": 31.61422,
+      "type": "building"
+    },
+    {
+      "id": "section_p2",
+      "name": "Section P2",
+      "latitude": 30.15548,
+      "longitude": 31.61416,
+      "type": "building"
+    },
+    {
+      "id": "section_q2",
+      "name": "Section Q2",
+      "latitude": 30.1555,
+      "longitude": 31.6141,
+      "type": "building"
+    },
+    {
+      "id": "section_r2",
+      "name": "Section R2",
+      "latitude": 30.15551,
+      "longitude": 31.61404,
+      "type": "building"
     }
-  ]
+  ],
+  "sections": {
+    "building": [
+      [30.15552, 31.61395],
+      [30.15554, 31.613965],
+      [30.155565, 31.613985],
+      [30.15559, 31.614005],
+      [30.15562, 31.614025],
+      [30.15565, 31.614045],
+      [30.155685, 31.61407],
+      [30.15572, 31.614095],
+      [30.155755, 31.61412],
+      [30.15579, 31.61415],
+      [30.155825, 31.614185],
+      [30.15586, 31.61422],
+      [30.155895, 31.614255],
+      [30.155925, 31.6143],
+      [30.155955, 31.614345],
+      [30.15598, 31.61439],
+      [30.156005, 31.61444],
+      [30.156025, 31.61449],
+      [30.15604, 31.61454],
+      [30.156045, 31.6146],
+      [30.156035, 31.61466],
+      [30.15602, 31.61471],
+      [30.155995, 31.61476],
+      [30.15596, 31.6148],
+      [30.15592, 31.61483],
+      [30.15588, 31.61485],
+      [30.15583, 31.61486],
+      [30.15578, 31.61485],
+      [30.15573, 31.61483],
+      [30.15568, 31.6148],
+      [30.15563, 31.61476],
+      [30.15559, 31.61472],
+      [30.15555, 31.61468],
+      [30.155515, 31.61463],
+      [30.15549, 31.61458],
+      [30.15547, 31.61452],
+      [30.155455, 31.61446],
+      [30.155445, 31.6144],
+      [30.15544, 31.61434],
+      [30.155445, 31.61428],
+      [30.15546, 31.61422],
+      [30.15548, 31.61416],
+      [30.1555, 31.6141],
+      [30.15551, 31.61404],
+      [30.15552, 31.61395]
+    ],
+    "entrance": [
+      [30.15552, 31.61395],
+      [30.1557, 31.61408],
+      [30.15565, 31.6142],
+      [30.1555, 31.6141],
+      [30.15552, 31.61395]
+    ],
+    "corridor": [
+      [30.15565, 31.61408],
+      [30.15585, 31.61425],
+      [30.15575, 31.6146],
+      [30.1556, 31.61445],
+      [30.15565, 31.61408]
+    ]
+  },
+  "centers": {
+    "entrance": [30.1556, 31.61405],
+    "corridor": [30.15572, 31.61435],
+    "building": [30.15575, 31.614131]
+  },
+  "navigation": {
+    "nodes": {
+      "entrance": [30.1556, 31.61405],
+      "corridor": [30.15572, 31.61435]
+    },
+    "edges": [
+      ["entrance", "corridor"]
+    ]
+  }
 }

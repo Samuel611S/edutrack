@@ -28,7 +28,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import campusGps from "@/lib/campus-gps.json"
-import { endTimeFromStartPlusMinutes, LECTURE_DURATION_MINUTES } from "@/lib/lecture-duration"
+import { endTimeFromStartPlusMinutes, minutesBetweenSameDay } from "@/lib/lecture-duration"
 
 type CourseRow = {
   id: string
@@ -102,7 +102,7 @@ export default function TeacherDashboard() {
   const [lectureCourseId, setLectureCourseId] = useState("")
   const [lectureDate, setLectureDate] = useState("")
   const [lectureStart, setLectureStart] = useState("10:00")
-  const [lectureEnd, setLectureEnd] = useState(() => endTimeFromStartPlusMinutes("10:00", LECTURE_DURATION_MINUTES) ?? "11:30")
+  const [lectureEnd, setLectureEnd] = useState(() => endTimeFromStartPlusMinutes("10:00", 90) ?? "11:30")
   const [lectureLocation, setLectureLocation] = useState(String(campusGps.lectureLocations[0][0]))
   const [lectureLat, setLectureLat] = useState(String(campusGps.lectureLocations[0][1]))
   const [lectureLng, setLectureLng] = useState(String(campusGps.lectureLocations[0][2]))
@@ -168,6 +168,18 @@ export default function TeacherDashboard() {
     })()
     return () => {
       c = true
+    }
+  }, [])
+
+  // Apply admin-defined defaults (stored locally) for new lecture creation.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("edutrack.locationDefaults.v1")
+      if (!raw) return
+      const parsed = JSON.parse(raw) as { radiusM?: number }
+      if (parsed.radiusM != null) setLectureRadius(String(parsed.radiusM))
+    } catch {
+      // ignore
     }
   }, [])
 
@@ -278,8 +290,8 @@ export default function TeacherDashboard() {
     router.push("/login")
   }
 
-  const syncEndFromStart = (start: string) => {
-    const next = endTimeFromStartPlusMinutes(start, LECTURE_DURATION_MINUTES)
+  const applyPresetDuration = (minutes: number) => {
+    const next = endTimeFromStartPlusMinutes(lectureStart, minutes)
     if (next) setLectureEnd(next)
   }
 
@@ -287,15 +299,12 @@ export default function TeacherDashboard() {
     e.preventDefault()
     setSaving(true)
     setError("")
-    const computedEnd = endTimeFromStartPlusMinutes(lectureStart, LECTURE_DURATION_MINUTES)
-    if (!computedEnd) {
-      setError(
-        `Start time must allow a ${LECTURE_DURATION_MINUTES}-minute session the same day (latest start 22:29).`,
-      )
+    const duration = minutesBetweenSameDay(lectureStart, lectureEnd)
+    if (duration == null || duration <= 0) {
+      setError("End time must be after start time (same day).")
       setSaving(false)
       return
     }
-    if (lectureEnd !== computedEnd) setLectureEnd(computedEnd)
     try {
       const res = await fetch("/api/teacher/lectures", {
         method: "POST",
@@ -305,7 +314,7 @@ export default function TeacherDashboard() {
           courseId: lectureCourseId,
           lectureDate: lectureDate,
           startTime: lectureStart,
-          endTime: computedEnd,
+          endTime: lectureEnd,
           location: lectureLocation,
           latitude: Number(lectureLat),
           longitude: Number(lectureLng),
@@ -536,6 +545,12 @@ export default function TeacherDashboard() {
                 <h1 className="text-2xl font-bold text-gray-900">Teacher Portal</h1>
               </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
+              <Button asChild size="sm" variant="outline" className="border-gray-300">
+                <Link href="/campus-map">Campus map</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="border-gray-300">
+                <Link href="/teacher/assessments">Assessments</Link>
+              </Button>
               <Button
                 asChild
                 size="sm"
@@ -924,14 +939,41 @@ export default function TeacherDashboard() {
                                 onChange={(e) => {
                                   const v = e.target.value
                                   setLectureStart(v)
-                                  syncEndFromStart(v)
                                 }}
                                 required
                               />
                             </div>
                             <div>
                               <Label>End time</Label>
-                              <Input value={lectureEnd} readOnly className="bg-slate-100 text-slate-700 cursor-not-allowed" />
+                              <Input
+                                type="time"
+                                value={lectureEnd.length === 5 ? lectureEnd : lectureEnd.slice(0, 5)}
+                                onChange={(e) => setLectureEnd(e.target.value)}
+                                required
+                              />
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                <button
+                                  type="button"
+                                  className="px-2 py-1 rounded border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-50"
+                                  onClick={() => applyPresetDuration(60)}
+                                >
+                                  1 hour
+                                </button>
+                                <button
+                                  type="button"
+                                  className="px-2 py-1 rounded border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-50"
+                                  onClick={() => applyPresetDuration(90)}
+                                >
+                                  1.5 hours
+                                </button>
+                                <button
+                                  type="button"
+                                  className="px-2 py-1 rounded border border-slate-200 bg-white text-xs text-slate-700 hover:bg-slate-50"
+                                  onClick={() => applyPresetDuration(120)}
+                                >
+                                  2 hours
+                                </button>
+                              </div>
                             </div>
                             <div className="md:col-span-2">
                               <Label>Location label</Label>
