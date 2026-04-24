@@ -292,7 +292,7 @@ export default function AttendancePage() {
               lectureId: currentLecture.id,
               latitude,
               longitude,
-                mode: "checkin",
+              mode: "checkin",
             }),
           })
 

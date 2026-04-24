@@ -28,11 +28,17 @@ export function lectureLocationToSectionKey(location: string): string | null {
     if (direct) return direct
   }
 
-  const m = raw.match(/\bsection\s*([a-f])\b/)
-  if (m?.[1]) return "building"
+  const letterMatch = raw.match(/\bsection\s*([a-h])\b/)
+  if (letterMatch?.[1]) {
+    const key = `section_${letterMatch[1].toLowerCase()}`
+    if (sections?.[key]) return key
+  }
 
-  const single = raw.match(/^\s*([a-f])\s*$/)
-  if (single?.[1]) return "building"
+  const single = raw.match(/^\s*([a-h])\s*$/)
+  if (single?.[1]) {
+    const key = `section_${single[1].toLowerCase()}`
+    if (sections?.[key]) return key
+  }
 
   if (raw.includes("entrance")) return "building"
   if (raw.includes("corridor")) return "building"
