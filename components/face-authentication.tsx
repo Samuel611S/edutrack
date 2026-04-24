@@ -9,10 +9,9 @@ interface FaceAuthProps {
   onSuccess: (faceData: { timestamp: string; captured: boolean }) => void
   onError: (error: string) => void
   type: "start" | "end"
-  lectureId: string
 }
 
-export function FaceAuthentication({ onSuccess, onError, type, lectureId }: FaceAuthProps) {
+export function FaceAuthentication({ onSuccess, onError, type }: FaceAuthProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [loading, setLoading] = useState(false)

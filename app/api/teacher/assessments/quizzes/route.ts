@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server"
 import { randomUUID } from "node:crypto"
 import { getDb } from "@/lib/db"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
+import { parseQuizDraft } from "@/lib/quiz-draft-parser"
+import { parseDeadlineMs } from "@/lib/time-format"
 
 type QuizQuestionInput = {
   prompt: string
@@ -26,7 +28,7 @@ export async function GET() {
        WHERE (? = 1 OR c.teacher_id = ?)
        ORDER BY q.created_at DESC`,
     )
-    .all(allAccess ? 1 : 0, session.sub) as any[]
+    .all(allAccess ? 1 : 0, session.sub) as Record<string, unknown>[]
 
   return NextResponse.json({ quizzes: rows || [] })
 }
@@ -43,11 +45,49 @@ export async function POST(request: NextRequest) {
     openAt?: string | null
     dueAt?: string | null
     questions?: QuizQuestionInput[]
+    quizDraft?: string
+    answerKey?: string
   }
 
-  if (!body.courseId || !body.title || !Array.isArray(body.questions) || body.questions.length < 1) {
-    return NextResponse.json({ message: "Missing required fields" }, { status: 400 })
+  let questions: QuizQuestionInput[] = Array.isArray(body.questions) ? body.questions : []
+  const draft = typeof body.quizDraft === "string" ? body.quizDraft.trim() : ""
+  const answerKey = typeof body.answerKey === "string" ? body.answerKey.trim() : ""
+  if (draft && answerKey) {
+    try {
+      const parsed = parseQuizDraft(draft, answerKey)
+      questions = parsed.map((q) => ({
+        prompt: q.prompt,
+        options: q.options,
+        correctIndex: q.correctIndex,
+      }))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Invalid quiz draft"
+      return NextResponse.json({ message: msg }, { status: 400 })
+    }
   }
+
+  if (!body.courseId || !body.title || !questions.length) {
+    return NextResponse.json(
+      { message: "Missing required fields (title + either questions[] or quizDraft + answerKey)" },
+      { status: 400 },
+    )
+  }
+
+  const dueRaw = body.dueAt != null && String(body.dueAt).trim() !== "" ? String(body.dueAt).trim() : null
+  if (!dueRaw) {
+    return NextResponse.json({ message: "Answer deadline (date and time) is required." }, { status: 400 })
+  }
+  const dueMs = parseDeadlineMs(dueRaw)
+  if (dueMs === null) {
+    return NextResponse.json({ message: "Invalid answer deadline." }, { status: 400 })
+  }
+
+  let openAtOut: string | null = null
+  if (body.openAt != null && String(body.openAt).trim() !== "") {
+    const o = parseDeadlineMs(String(body.openAt).trim())
+    openAtOut = o !== null ? new Date(o).toISOString() : null
+  }
+  const dueAtOut = new Date(dueMs).toISOString()
 
   const db = getDb()
   const course = db
@@ -65,8 +105,8 @@ export async function POST(request: NextRequest) {
     body.courseId,
     body.title.trim(),
     (body.description || "").trim() || null,
-    body.openAt || null,
-    body.dueAt || null,
+    openAtOut,
+    dueAtOut,
     session.sub,
   )
 
@@ -75,7 +115,8 @@ export async function POST(request: NextRequest) {
      VALUES (?, ?, ?, ?, ?, ?)`,
   )
 
-  body.questions.forEach((q, idx) => {
+  let inserted = 0
+  questions.forEach((q, idx) => {
     const prompt = String(q.prompt || "").trim()
     const options = Array.isArray(q.options) ? q.options.map((o) => String(o || "").trim()).filter(Boolean) : []
     const correct = Number(q.correctIndex)
@@ -88,7 +129,13 @@ export async function POST(request: NextRequest) {
       correct,
       idx,
     )
+    inserted++
   })
+
+  if (inserted === 0) {
+    db.prepare("DELETE FROM quizzes WHERE id = ?").run(quizId)
+    return NextResponse.json({ message: "No valid questions were saved (check prompts, choices, and answer key)." }, { status: 400 })
+  }
 
   return NextResponse.json({ success: true, id: quizId })
 }

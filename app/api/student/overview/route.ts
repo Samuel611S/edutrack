@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { formatTimeAmPm } from "@/lib/time-format"
 import { getDb } from "@/lib/db"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 
@@ -88,7 +89,7 @@ export async function GET() {
     id: u.id,
     course: u.course,
     date: String(u.lecture_date).slice(0, 10),
-    time: u.start_time || "",
+    time: formatTimeAmPm(u.start_time || ""),
     location: u.location || "",
     attended: u.attended === 1,
   }))

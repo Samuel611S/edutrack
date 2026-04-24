@@ -111,7 +111,7 @@ export default function AdminCoursesPage() {
       return
     }
     void loadAdminMaterials(editing.id)
-  }, [editing?.id, loadAdminMaterials])
+  }, [editing, loadAdminMaterials])
 
   const applySearch = () => {
     setQ(searchInput.trim())

@@ -7,16 +7,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MapPin, Clock, CheckCircle, AlertCircle, Loader2, Radio } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { formatDurationMs, parseLectureBounds } from "@/lib/lecture-window"
+import { formatTimeAmPm } from "@/lib/time-format"
 import { getSectionPolygonByKey, lectureLocationToSectionKey, pointInPolygon } from "@/lib/campus-sections"
 
 const POLL_MS = 15_000
 const MAX_OUTSIDE_SEC = 600
-
-interface AttendanceLocation {
-  latitude: number
-  longitude: number
-  accuracy: number
-}
 
 interface LectureInfo {
   id: string
@@ -57,7 +52,6 @@ export default function AttendancePage() {
   const [lastDistance, setLastDistance] = useState<number | null>(null)
   const [isInside, setIsInside] = useState<boolean | null>(null)
   const [tick, setTick] = useState(0)
-  const [hadSampleDuring, setHadSampleDuring] = useState(false)
   const [checkedIn, setCheckedIn] = useState(false)
 
   const trackingRef = useRef(false)
@@ -66,7 +60,6 @@ export default function AttendancePage() {
   const lastWasOutsideRef = useRef(false)
   const outsideSecRef = useRef(0)
   const pollInFlightRef = useRef(false)
-  const hadSampleDuringLectureRef = useRef(false)
 
   const bounds = useMemo(() => {
     if (!currentLecture?.lecture_date) return null
@@ -80,6 +73,12 @@ export default function AttendancePage() {
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 1000)
     return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setIsLocationSupported(false)
+    }
   }, [])
 
   useEffect(() => {
@@ -132,8 +131,6 @@ export default function AttendancePage() {
     if (!currentLecture || !bounds || !Number.isFinite(bounds.startMs)) return
     const shouldTrack = checkedIn && phase === "during"
     if (shouldTrack && !trackingRef.current) {
-      hadSampleDuringLectureRef.current = false
-      setHadSampleDuring(false)
       lastSampleAtRef.current = null
       lastWasOutsideRef.current = false
       outsideSecRef.current = 0
@@ -161,11 +158,6 @@ export default function AttendancePage() {
       const radius = currentLecture.allowed_radius_m
       const d = haversineMeters(latitude, longitude, currentLecture.latitude, currentLecture.longitude)
       const outside = d > radius
-
-      if (at >= bounds.startMs && at <= bounds.endMs) {
-        hadSampleDuringLectureRef.current = true
-        setHadSampleDuring(true)
-      }
 
       if (lastSampleAtRef.current != null) {
         const segStart = Math.max(lastSampleAtRef.current, bounds.startMs)
@@ -247,14 +239,12 @@ export default function AttendancePage() {
     }
 
     const now = Date.now()
-    const lateCutoff = bounds.startMs + 10 * 60 * 1000
-    if (now > lateCutoff) {
-      setError("Check-in window is closed for this lecture.")
+    if (now < bounds.startMs) {
+      setError("Check-in is only available during the lecture. The lecture has not started yet.")
       return
     }
-
     if (now > bounds.endMs) {
-      setError("Lecture has ended. Check-in is closed.")
+      setError("Check-in is only available during the lecture. The lecture has already ended.")
       return
     }
 
@@ -332,17 +322,10 @@ export default function AttendancePage() {
 
   const timeLabel =
     currentLecture &&
-    [currentLecture.start_time, currentLecture.end_time].filter(Boolean).join(" - ")
+    [formatTimeAmPm(currentLecture.start_time), formatTimeAmPm(currentLecture.end_time)].filter((s) => s && s !== "—").join(" – ")
 
   const durationLabel = bounds ? formatDurationMs(bounds.durationMs) : "—"
   const outsideOver = outsideSec > MAX_OUTSIDE_SEC
-  const canSubmit =
-    bounds &&
-    Number.isFinite(bounds.endMs) &&
-    Date.now() >= bounds.endMs &&
-    hadSampleDuring &&
-    !outsideOver &&
-    !loading
 
   void tick
 
@@ -459,7 +442,7 @@ export default function AttendancePage() {
                       type="button"
                       className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white"
                       onClick={checkIn}
-                      disabled={loading}
+                      disabled={loading || phase !== "during"}
                     >
                       Check in
                     </Button>

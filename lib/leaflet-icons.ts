@@ -1,4 +1,3 @@
-/** Call once per Leaflet import (client-only) so default markers work with bundlers. */
 export function fixLeafletDefaultIcons(L: typeof import("leaflet")) {
   type IconProto = { _getIconUrl?: string }
   delete (L.Icon.Default.prototype as IconProto)._getIconUrl

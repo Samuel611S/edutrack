@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
+import { parseDeadlineMs } from "@/lib/time-format"
 
 export async function GET() {
   const session = await getSessionUser()
@@ -8,6 +9,9 @@ export async function GET() {
   if (session.role !== "student") return forbidden()
 
   const db = getDb()
+
+  type QuizListRow = Record<string, unknown>
+  type AssignmentListRow = Record<string, unknown>
 
   const quizzes = db
     .prepare(
@@ -21,20 +25,30 @@ export async function GET() {
        JOIN course_enrollments e ON e.course_id = c.id AND e.student_id = ?
        ORDER BY q.created_at DESC`,
     )
-    .all(session.sub, session.sub, session.sub) as any[]
+    .all(session.sub, session.sub, session.sub) as QuizListRow[]
+
+  const now = Date.now()
+  const visibleQuizzes = quizzes.filter((q) => {
+    const dueMs = parseDeadlineMs(q.due_at)
+    if (dueMs === null) return true
+    if (now <= dueMs) return true
+    const attempted = q.my_score != null || q.my_max != null
+    return attempted
+  })
 
   const assignments = db
     .prepare(
       `SELECT a.id, a.course_id, a.title, a.description, a.due_at, a.created_at,
               c.course_code, c.course_name,
-              (SELECT submitted_at FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.student_id = ?) AS submitted_at
+              (SELECT submitted_at FROM assignment_submissions s WHERE s.assignment_id = a.id AND s.student_id = ?) AS submitted_at,
+              (SELECT h.id FROM assignment_handouts h WHERE h.assignment_id = a.id) AS handout_file_id
        FROM assignments a
        JOIN courses c ON c.id = a.course_id
        JOIN course_enrollments e ON e.course_id = c.id AND e.student_id = ?
        ORDER BY a.created_at DESC`,
     )
-    .all(session.sub, session.sub) as any[]
+    .all(session.sub, session.sub) as AssignmentListRow[]
 
-  return NextResponse.json({ quizzes: quizzes || [], assignments: assignments || [] })
+  return NextResponse.json({ quizzes: visibleQuizzes || [], assignments: assignments || [] })
 }
 

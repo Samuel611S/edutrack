@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import { randomUUID } from "node:crypto"
 import { getDb } from "@/lib/db"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
+import { parseDeadlineMs } from "@/lib/time-format"
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ quizId: string }> }) {
   const session = await getSessionUser()
@@ -14,16 +15,20 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ quizId
 
   const db = getDb()
 
-  // Ensure student is enrolled in the quiz course
   const quiz = db
     .prepare(
-      `SELECT q.id, q.course_id
+      `SELECT q.id, q.course_id, q.due_at
        FROM quizzes q
        JOIN course_enrollments e ON e.course_id = q.course_id AND e.student_id = ?
        WHERE q.id = ?`,
     )
-    .get(session.sub, quizId) as { id: string; course_id: string } | undefined
+    .get(session.sub, quizId) as { id: string; course_id: string; due_at: string | null } | undefined
   if (!quiz) return NextResponse.json({ message: "Quiz not found" }, { status: 404 })
+
+  const dueMs = parseDeadlineMs(quiz.due_at)
+  if (dueMs !== null && Date.now() > dueMs) {
+    return NextResponse.json({ message: "The answer deadline has passed. Submissions are closed." }, { status: 403 })
+  }
 
   const qs = db
     .prepare(`SELECT id, correct_index FROM quiz_questions WHERE quiz_id = ? ORDER BY sort_order ASC`)

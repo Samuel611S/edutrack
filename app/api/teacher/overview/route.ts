@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { formatTimeAmPm } from "@/lib/time-format"
 import { getDb } from "@/lib/db"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 
@@ -72,7 +73,7 @@ export async function GET() {
   const lectureRows = lectures.map((l) => ({
     id: l.id,
     date: String(l.lecture_date).slice(0, 10),
-    time: l.start_time || "",
+    time: formatTimeAmPm(l.start_time || ""),
     course: l.course,
     location: l.location || "",
     enrolled: l.enrolled,
@@ -122,7 +123,11 @@ export async function GET() {
       avgAttendance: avgAll,
       activeCourses: courseRows.length,
     },
-    courses: courseRows.map(({ lecCount: _, ...rest }) => rest),
+    courses: courseRows.map((row) => {
+      const { lecCount, ...rest } = row
+      void lecCount
+      return rest
+    }),
     lectures: lectureRows,
     gradebook,
   })

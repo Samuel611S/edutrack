@@ -14,7 +14,6 @@ import {
   CheckCircle,
   AlertCircle,
   MapPin,
-  Clock,
   Award,
   Download,
   FileText,
@@ -25,6 +24,7 @@ import {
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import {
   youtubeEmbedUrlForActivatedPlayer,
   youtubeVideoIdFromEmbedUrl,
@@ -133,10 +133,12 @@ function MaterialBlock({
                   aria-label={`Play video: ${item.title}`}
                 >
                   {ytThumbId && (
-                    <img
+                    <Image
                       src={`https://i.ytimg.com/vi/${ytThumbId}/hqdefault.jpg`}
                       alt=""
-                      className="absolute inset-0 h-full w-full object-cover opacity-90"
+                      fill
+                      className="object-cover opacity-90"
+                      sizes="(max-width: 768px) 100vw, 896px"
                     />
                   )}
                   <span className="relative z-20 inline-flex h-16 w-16 items-center justify-center rounded-full bg-red-600 shadow-lg ring-4 ring-white/30">
@@ -239,9 +241,6 @@ export default function StudentDashboard() {
               </Link>
             </div>
             <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-              <Button asChild size="sm" variant="outline" className="border-gray-300">
-                <Link href="/campus-map">Campus map</Link>
-              </Button>
               <Button asChild size="sm" variant="outline" className="border-gray-300">
                 <Link href="/student/assessments">Assessments</Link>
               </Button>

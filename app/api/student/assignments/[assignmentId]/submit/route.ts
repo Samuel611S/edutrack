@@ -3,7 +3,13 @@ import { randomUUID } from "node:crypto"
 import { getDb } from "@/lib/db"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 
-const MAX_BYTES = 2 * 1024 * 1024 // 2MB demo cap
+const MAX_BYTES = 5 * 1024 * 1024
+
+function isPdf(file: File, filename: string) {
+  const n = filename.toLowerCase()
+  const t = (file.type || "").toLowerCase()
+  return t.includes("pdf") || n.endsWith(".pdf")
+}
 
 export async function POST(request: NextRequest, ctx: { params: Promise<{ assignmentId: string }> }) {
   const session = await getSessionUser()
@@ -31,12 +37,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ assign
     return NextResponse.json({ message: "File is required" }, { status: 400 })
   }
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ message: "File too large (max 2MB)" }, { status: 413 })
+    return NextResponse.json({ message: "File too large (max 5MB)" }, { status: 413 })
+  }
+
+  const filename = file.name || "submission.pdf"
+  if (!isPdf(file, filename)) {
+    return NextResponse.json({ message: "Please upload your answers as a PDF file" }, { status: 400 })
   }
 
   const buf = Buffer.from(await file.arrayBuffer())
-  const filename = file.name || "submission"
-  const mime = file.type || "application/octet-stream"
+  const mime = file.type || "application/pdf"
 
   const existing = db
     .prepare("SELECT id FROM assignment_submissions WHERE assignment_id = ? AND student_id = ?")

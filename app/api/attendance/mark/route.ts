@@ -81,8 +81,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Section-only enforcement: must be inside the mapped section polygon.
-    // If we can't map, fall back to the "building" section (if present).
     const sectionKeyRaw = lecture.location ? lectureLocationToSectionKey(lecture.location) : null
     const sectionKey = sectionKeyRaw ?? "building"
     const sectionPoly = getSectionPolygonByKey(sectionKey)
@@ -113,13 +111,14 @@ export async function POST(request: NextRequest) {
       .map((x) => Number.parseInt(x, 10))
     const startMs = new Date(y, (mo || 1) - 1, d || 1, sh || 0, sm || 0, 0, 0).getTime()
     const endMs = new Date(y, (mo || 1) - 1, d || 1, eh || 0, em || 0, 0, 0).getTime()
-    const lateCutoffMs = startMs + 10 * 60 * 1000
+    const t = now.getTime()
 
-    if (action === "checkin" && now.getTime() > lateCutoffMs) {
-      return NextResponse.json({ message: "Check-in window is closed for this lecture." }, { status: 403 })
-    }
-    if (action === "checkin" && now.getTime() > endMs) {
-      return NextResponse.json({ message: "Lecture already ended." }, { status: 403 })
+    if (action === "checkin" && (t < startMs || t > endMs)) {
+      const msg =
+        t < startMs
+          ? "Check-in is only available during the lecture. The lecture has not started yet."
+          : "Check-in is only available during the lecture. The lecture has already ended."
+      return NextResponse.json({ message: msg }, { status: 403 })
     }
 
     const id = `att_${randomUUID()}`

@@ -7,7 +7,6 @@ let _db: Database.Database | null = null
 
 function getDbPath() {
   if (process.env.DATABASE_PATH) return process.env.DATABASE_PATH
-  // Vercel serverless: only / tmp is writable; bundled dirs are read-only (SQLite + WAL fails there).
   if (process.env.VERCEL) {
     return path.join(os.tmpdir(), "edutrack-university.db")
   }
@@ -185,9 +184,6 @@ function migrate(db: Database.Database) {
     `)
   }
 
-  // =====================
-  // Assessments (Quizzes + Assignments)
-  // =====================
   if (!tableExists(db, "quizzes")) {
     db.exec(`
       CREATE TABLE quizzes (
@@ -281,6 +277,22 @@ function migrate(db: Database.Database) {
         FOREIGN KEY (submission_id) REFERENCES assignment_submissions(id) ON DELETE CASCADE
       );
       CREATE INDEX IF NOT EXISTS idx_submission_files_submission_id ON submission_files(submission_id);
+    `)
+  }
+
+  if (!tableExists(db, "assignment_handouts")) {
+    db.exec(`
+      CREATE TABLE assignment_handouts (
+        id TEXT PRIMARY KEY,
+        assignment_id TEXT NOT NULL UNIQUE,
+        filename TEXT NOT NULL,
+        mime_type TEXT,
+        size_bytes INTEGER NOT NULL,
+        data BLOB NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_assignment_handouts_assignment_id ON assignment_handouts(assignment_id);
     `)
   }
 }

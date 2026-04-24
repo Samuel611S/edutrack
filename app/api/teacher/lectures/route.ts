@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
   }
 
   const duration = minutesBetweenSameDay(st, et)
-  // Teachers can choose any duration, as long as it's same-day and reasonable.
   if (duration === null || duration <= 0 || duration > 6 * 60) {
     return NextResponse.json(
       {

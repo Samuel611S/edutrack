@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
+import { formatDateTimeAmPm } from "@/lib/time-format"
 
 type QuizListItem = {
   id: string
@@ -13,6 +14,7 @@ type QuizListItem = {
   course_name: string
   title: string
   description: string | null
+  due_at: string | null
   question_count: number
   my_score: number | null
   my_max: number | null
@@ -26,6 +28,18 @@ type AssignmentListItem = {
   description: string | null
   due_at: string | null
   submitted_at: string | null
+  handout_file_id: string | null
+}
+
+type ActiveQuiz = {
+  id: string
+  course_id: string
+  title: string
+  description: string | null
+  open_at: string | null
+  due_at: string | null
+  course_code: string
+  course_name: string
 }
 
 export default function StudentAssessmentsPage() {
@@ -37,7 +51,7 @@ export default function StudentAssessmentsPage() {
   const [error, setError] = useState("")
 
   const [activeQuizId, setActiveQuizId] = useState<string | null>(null)
-  const [quiz, setQuiz] = useState<any>(null)
+  const [quiz, setQuiz] = useState<ActiveQuiz | null>(null)
   const [questions, setQuestions] = useState<{ id: string; prompt: string; options: string[] }[]>([])
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [quizResult, setQuizResult] = useState<{ score: number; max: number } | null>(null)
@@ -73,6 +87,7 @@ export default function StudentAssessmentsPage() {
     const json = await res.json()
     if (!res.ok) {
       setError(json.message || "Could not open quiz")
+      setActiveQuizId(null)
       return
     }
     setQuiz(json.quiz)
@@ -155,7 +170,12 @@ export default function StudentAssessmentsPage() {
                   <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5">
                     <CardHeader>
                       <CardTitle>{quiz.title}</CardTitle>
-                      <CardDescription>{quiz.course_code} — {quiz.course_name}</CardDescription>
+                      <CardDescription>
+                        {quiz.course_code} — {quiz.course_name}
+                        {quiz.due_at && (
+                          <span className="block mt-1 text-slate-600">Answer by {formatDateTimeAmPm(quiz.due_at)}</span>
+                        )}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {questions.map((q, idx) => (
@@ -204,7 +224,10 @@ export default function StudentAssessmentsPage() {
                         <p className="text-sm text-slate-500">{q.course_code}</p>
                         <p className="text-lg font-semibold text-gray-900">{q.title}</p>
                         {q.description && <p className="text-sm text-slate-600 mt-1">{q.description}</p>}
-                        <p className="text-xs text-slate-500 mt-2">
+                        {q.due_at ? (
+                          <p className="text-xs text-slate-500 mt-2">Answer by: {formatDateTimeAmPm(q.due_at)}</p>
+                        ) : null}
+                        <p className="text-xs text-slate-500 mt-1">
                           Questions: {q.question_count}{" "}
                           {q.my_score != null && q.my_max != null ? `— Your score: ${q.my_score}/${q.my_max}` : ""}
                         </p>
@@ -228,6 +251,14 @@ export default function StudentAssessmentsPage() {
                         <p className="text-xs text-slate-500 mt-2">
                           {a.submitted_at ? `Submitted: ${String(a.submitted_at)}` : "Not submitted yet"}
                         </p>
+                        {a.handout_file_id && (
+                          <a
+                            className="mt-2 inline-block text-sm text-indigo-600 hover:underline"
+                            href={`/api/files/${encodeURIComponent(a.handout_file_id)}`}
+                          >
+                            Download assignment (PDF)
+                          </a>
+                        )}
                         <AssignmentUploader assignmentId={a.id} onSubmit={submitAssignment} />
                       </CardContent>
                     </Card>
@@ -269,6 +300,7 @@ function AssignmentUploader({
     <div className="mt-3 space-y-2">
       <input
         type="file"
+        accept=".pdf,application/pdf"
         onChange={(e) => setFile(e.target.files?.[0] || null)}
         className="block w-full text-sm"
       />
@@ -283,7 +315,7 @@ function AssignmentUploader({
         disabled={!file || submitting}
         onClick={submit}
       >
-        {submitting ? "Submitting…" : "Upload submission"}
+        {submitting ? "Submitting…" : "Upload PDF answers"}
       </Button>
     </div>
   )

@@ -1,4 +1,3 @@
-/** Standard session length for scheduling and attendance rules. */
 export const LECTURE_DURATION_MINUTES = 90
 
 export function parseHHmm(t: string): { h: number; m: number } | null {
@@ -10,7 +9,6 @@ export function parseHHmm(t: string): { h: number; m: number } | null {
   return { h, m }
 }
 
-/** Minutes from `start` to `end` on the same calendar day; null if invalid or overnight. */
 export function minutesBetweenSameDay(start: string, end: string): number | null {
   const a = parseHHmm(start)
   const b = parseHHmm(end)
@@ -21,13 +19,10 @@ export function minutesBetweenSameDay(start: string, end: string): number | null
   return eb - sa
 }
 
-/**
- * Returns end time as HH:mm, same day only. Null if start invalid or end would pass midnight.
- */
 export function endTimeFromStartPlusMinutes(start: string, addMinutes: number): string | null {
   const a = parseHHmm(start)
   if (!a) return null
-  let total = a.h * 60 + a.m + addMinutes
+  const total = a.h * 60 + a.m + addMinutes
   if (total >= 24 * 60) return null
   const h = Math.floor(total / 60)
   const m = total % 60

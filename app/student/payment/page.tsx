@@ -159,7 +159,7 @@ export default function StudentPaymentPage() {
                       <Button
                         onClick={() => void processPayment()}
                         className="bg-emerald-600 hover:bg-emerald-700"
-                        disabled={!data.canPay || data.status === "paid" || processing}
+                        disabled={!data.canPay || processing}
                       >
                         {processing ? "Processing..." : "Pay now"}
                       </Button>

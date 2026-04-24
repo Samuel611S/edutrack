@@ -14,9 +14,20 @@ interface CampusLocation {
   type: "building" | "parking" | "facility"
 }
 
-const campusLocations = campusGps.mapMarkers as CampusLocation[]
-
 type LatLngTuple = [number, number]
+
+type CampusGpsShape = {
+  institution: string
+  address: string
+  center: { lat: number; lng: number }
+  mapMarkers: CampusLocation[]
+  sections?: Record<string, LatLngTuple[]>
+  centers?: Record<string, LatLngTuple>
+}
+
+const gps = campusGps as unknown as CampusGpsShape
+
+const campusLocations = gps.mapMarkers
 
 function toTitle(s: string) {
   return s
@@ -39,8 +50,8 @@ export function CampusMapView() {
       if (cancelled || !mapRef.current) return
       fixLeafletDefaultIcons(L)
 
-      const centerLat = campusGps.center.lat
-      const centerLng = campusGps.center.lng
+      const centerLat = gps.center.lat
+      const centerLng = gps.center.lng
 
       const map = L.map(mapRef.current, {
         zoomControl: true,
@@ -52,11 +63,9 @@ export function CampusMapView() {
         maxZoom: 19,
       }).addTo(map)
 
-      // Building outline + indoor sections (polygons)
-      const sections = (campusGps as any).sections as Record<string, LatLngTuple[]> | undefined
-      const centers = (campusGps as any).centers as Record<string, LatLngTuple> | undefined
+      const sections = gps.sections
+      const centers = gps.centers
       if (sections) {
-        // Use "building" section as the outline + fitBounds target
         const buildingPoly = sections.building
         if (Array.isArray(buildingPoly) && buildingPoly.length >= 3) {
           const buildingLayer = L.polygon(buildingPoly, {
@@ -99,7 +108,6 @@ export function CampusMapView() {
             .addTo(map)
             .bindPopup(`<strong>${name}</strong>`)
 
-          // Make it obvious on mobile (no hover): show a permanent label where possible.
           const center = centers?.[key]
           if (center && Array.isArray(center) && center.length === 2) {
             const label = L.marker(center, {
@@ -122,7 +130,6 @@ export function CampusMapView() {
             label.setZIndexOffset(1000)
           }
 
-          // Keep sections above the building fill.
           try {
             layer.bringToFront()
           } catch {
@@ -160,19 +167,10 @@ export function CampusMapView() {
   return (
     <Card className="bg-slate-800 border-slate-700">
       <CardHeader>
-        <CardTitle className="text-white">{campusGps.institution}</CardTitle>
-        <CardDescription className="text-slate-400">
-          {campusGps.address} — Leaflet + OpenStreetMap (no API key)
-        </CardDescription>
+        <CardTitle className="text-white">{gps.institution}</CardTitle>
+        <CardDescription className="text-slate-400">{gps.address}</CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-slate-400 text-sm mb-3">
-          Map tiles by{" "}
-          <a href="https://www.openstreetmap.org/" className="text-indigo-300 underline" target="_blank" rel="noreferrer">
-            OpenStreetMap
-          </a>{" "}
-          contributors.
-        </p>
         <div
           ref={mapRef}
           style={{ width: "100%", zIndex: 0 }}

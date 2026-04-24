@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { parseQuizDraft } from "@/lib/quiz-draft-parser"
+import { formatDateTimeAmPm } from "@/lib/time-format"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,6 +18,8 @@ type Quiz = {
   course_id: string
   title: string
   description: string | null
+  open_at: string | null
+  due_at: string | null
   created_at: string
   course_code: string
   course_name: string
@@ -29,11 +33,10 @@ type Assignment = {
   due_at: string | null
   created_at: string
   submissions: number
+  handout_file_id: string | null
   course_code: string
   course_name: string
 }
-
-type DraftQuestion = { prompt: string; optionsText: string; correctIndex: string }
 
 export default function TeacherAssessmentsPage() {
   const router = useRouter()
@@ -48,31 +51,32 @@ export default function TeacherAssessmentsPage() {
 
   const [quizTitle, setQuizTitle] = useState("")
   const [quizDesc, setQuizDesc] = useState("")
-  const [question, setQuestion] = useState<DraftQuestion>({
-    prompt: "",
-    optionsText: "Option A\nOption B\nOption C\nOption D",
-    correctIndex: "0",
-  })
+  const [quizDraft, setQuizDraft] = useState(
+    "1. Sample question?\nA) Wrong\nB) Correct\nC) Wrong\n\n2. Second question?\nA) Yes\nB) No",
+  )
+  const [answerKey, setAnswerKey] = useState("1=b 2=a")
+  const [quizDueAt, setQuizDueAt] = useState("")
 
   const [asgTitle, setAsgTitle] = useState("")
   const [asgDesc, setAsgDesc] = useState("")
   const [asgDue, setAsgDue] = useState("")
+  const [asgPdf, setAsgPdf] = useState<File | null>(null)
 
-  const options = useMemo(
-    () =>
-      question.optionsText
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean),
-    [question.optionsText],
-  )
+  const preview = useMemo(() => {
+    try {
+      const qs = parseQuizDraft(quizDraft, answerKey)
+      return { ok: true as const, count: qs.length, error: "" }
+    } catch (e) {
+      return { ok: false as const, count: 0, error: e instanceof Error ? e.message : "Invalid draft" }
+    }
+  }, [quizDraft, answerKey])
 
   const load = async () => {
     setError("")
     setLoading(true)
     try {
       const ov = await fetch("/api/teacher/overview", { credentials: "include" }).then((r) => r.json())
-      const cs = (ov?.courses || []) as any[]
+      const cs = (ov?.courses || []) as Course[]
       const mapped = cs.map((c) => ({ id: c.id, course_code: c.course_code, course_name: c.course_name }))
       setCourses(mapped)
       if (!courseId && mapped[0]) setCourseId(mapped[0].id)
@@ -96,6 +100,10 @@ export default function TeacherAssessmentsPage() {
 
   const createQuiz = async () => {
     setError("")
+    if (!preview.ok) {
+      setError(preview.error)
+      return
+    }
     try {
       const res = await fetch("/api/teacher/assessments/quizzes", {
         method: "POST",
@@ -105,13 +113,9 @@ export default function TeacherAssessmentsPage() {
           courseId,
           title: quizTitle,
           description: quizDesc,
-          questions: [
-            {
-              prompt: question.prompt,
-              options,
-              correctIndex: Number(question.correctIndex || 0),
-            },
-          ],
+          dueAt: quizDueAt,
+          quizDraft,
+          answerKey,
         }),
       })
       const json = await res.json()
@@ -121,7 +125,7 @@ export default function TeacherAssessmentsPage() {
       }
       setQuizTitle("")
       setQuizDesc("")
-      setQuestion((q) => ({ ...q, prompt: "" }))
+      setQuizDueAt("")
       await load()
     } catch {
       setError("Network error creating quiz")
@@ -131,16 +135,17 @@ export default function TeacherAssessmentsPage() {
   const createAssignment = async () => {
     setError("")
     try {
+      const fd = new FormData()
+      fd.set("courseId", courseId)
+      fd.set("title", asgTitle)
+      fd.set("description", asgDesc)
+      if (asgDue) fd.set("dueAt", asgDue)
+      if (asgPdf) fd.set("file", asgPdf)
+
       const res = await fetch("/api/teacher/assessments/assignments", {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          courseId,
-          title: asgTitle,
-          description: asgDesc,
-          dueAt: asgDue || null,
-        }),
+        body: fd,
       })
       const json = await res.json()
       if (!res.ok) {
@@ -150,6 +155,7 @@ export default function TeacherAssessmentsPage() {
       setAsgTitle("")
       setAsgDesc("")
       setAsgDue("")
+      setAsgPdf(null)
       await load()
     } catch {
       setError("Network error creating assignment")
@@ -205,7 +211,11 @@ export default function TeacherAssessmentsPage() {
                 <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5">
                   <CardHeader>
                     <CardTitle>Create quiz</CardTitle>
-                    <CardDescription>For now: quick 1-question quiz (you can extend later).</CardDescription>
+                    <CardDescription>
+                      Type all questions and choices. Start each question with a number (e.g. <code className="text-xs">1.</code> or{" "}
+                      <code className="text-xs">2)</code>). Each choice on its own line as <code className="text-xs">A) ...</code>,{" "}
+                      <code className="text-xs">B) ...</code>. Then set the answer key like <code className="text-xs">1=a 2=c 3=b</code>.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
@@ -217,23 +227,35 @@ export default function TeacherAssessmentsPage() {
                       <Input value={quizDesc} onChange={(e) => setQuizDesc(e.target.value)} placeholder="Optional" />
                     </div>
                     <div>
-                      <Label>Question</Label>
-                      <Input value={question.prompt} onChange={(e) => setQuestion((q) => ({ ...q, prompt: e.target.value }))} placeholder="Question prompt" />
-                    </div>
-                    <div>
-                      <Label>Options (one per line)</Label>
-                      <textarea
-                        value={question.optionsText}
-                        onChange={(e) => setQuestion((q) => ({ ...q, optionsText: e.target.value }))}
-                        className="w-full min-h-28 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
+                      <Label>Answer by (date and time)</Label>
+                      <Input
+                        type="datetime-local"
+                        value={quizDueAt}
+                        onChange={(e) => setQuizDueAt(e.target.value)}
+                        required
                       />
                     </div>
                     <div>
-                      <Label>Correct option index (0-based)</Label>
-                      <Input value={question.correctIndex} onChange={(e) => setQuestion((q) => ({ ...q, correctIndex: e.target.value }))} />
-                      <p className="text-xs text-slate-500 mt-1">Example: 0 means the first option is correct.</p>
+                      <Label>Questions and choices</Label>
+                      <textarea
+                        value={quizDraft}
+                        onChange={(e) => setQuizDraft(e.target.value)}
+                        className="w-full min-h-56 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-mono"
+                        spellCheck={false}
+                      />
                     </div>
-                    <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={createQuiz} disabled={!quizTitle || !question.prompt || options.length < 2}>
+                    <div>
+                      <Label>Answer key</Label>
+                      <Input value={answerKey} onChange={(e) => setAnswerKey(e.target.value)} placeholder="1=a 2=c 3=b 4=d" />
+                    </div>
+                    <p className={`text-sm ${preview.ok ? "text-emerald-700" : "text-amber-700"}`}>
+                      {preview.ok ? `Preview: ${preview.count} question(s) ready to save.` : `Preview: ${preview.error}`}
+                    </p>
+                    <Button
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                      onClick={createQuiz}
+                      disabled={!quizTitle || !quizDueAt || !preview.ok}
+                    >
                       Create quiz
                     </Button>
                   </CardContent>
@@ -246,6 +268,9 @@ export default function TeacherAssessmentsPage() {
                         <p className="text-sm text-slate-500">{q.course_code}</p>
                         <p className="text-lg font-semibold text-gray-900">{q.title}</p>
                         {q.description && <p className="text-sm text-slate-600 mt-1">{q.description}</p>}
+                        {q.due_at ? (
+                          <p className="text-xs text-slate-500 mt-2">Answer by: {formatDateTimeAmPm(q.due_at)}</p>
+                        ) : null}
                       </CardContent>
                     </Card>
                   ))}
@@ -256,7 +281,9 @@ export default function TeacherAssessmentsPage() {
                 <Card className="bg-white/90 border-white/80 shadow-md shadow-indigo-950/5">
                   <CardHeader>
                     <CardTitle>Create assignment</CardTitle>
-                    <CardDescription>Students will upload a file submission online.</CardDescription>
+                    <CardDescription>
+                      Optional: attach the assignment brief as a <strong>PDF</strong> (max 5MB). Students submit answers as a <strong>PDF</strong> too.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div>
@@ -270,6 +297,15 @@ export default function TeacherAssessmentsPage() {
                     <div>
                       <Label>Due date/time (optional)</Label>
                       <Input value={asgDue} onChange={(e) => setAsgDue(e.target.value)} placeholder="2026-05-01 23:59" />
+                    </div>
+                    <div>
+                      <Label>Assignment PDF (optional)</Label>
+                      <Input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={(e) => setAsgPdf(e.target.files?.[0] || null)}
+                        className="cursor-pointer"
+                      />
                     </div>
                     <Button className="bg-emerald-600 hover:bg-emerald-700 text-white" onClick={createAssignment} disabled={!asgTitle}>
                       Create assignment
@@ -285,6 +321,14 @@ export default function TeacherAssessmentsPage() {
                         <p className="text-lg font-semibold text-gray-900">{a.title}</p>
                         {a.description && <p className="text-sm text-slate-600 mt-1">{a.description}</p>}
                         <p className="text-xs text-slate-500 mt-2">Submissions: {a.submissions}</p>
+                        {a.handout_file_id && (
+                          <a
+                            className="mt-2 inline-block text-sm text-indigo-600 hover:underline"
+                            href={`/api/files/${encodeURIComponent(a.handout_file_id)}`}
+                          >
+                            Download assignment PDF
+                          </a>
+                        )}
                       </CardContent>
                     </Card>
                   ))}

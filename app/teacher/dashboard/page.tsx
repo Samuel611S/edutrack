@@ -26,9 +26,10 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import campusGps from "@/lib/campus-gps.json"
 import { endTimeFromStartPlusMinutes, minutesBetweenSameDay } from "@/lib/lecture-duration"
+import { formatTimeAmPm } from "@/lib/time-format"
 
 type CourseRow = {
   id: string
@@ -145,7 +146,7 @@ export default function TeacherDashboard() {
   })
   const [savingMaterial, setSavingMaterial] = useState(false)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const res = await fetch("/api/teacher/overview", { credentials: "include" })
     const json = await res.json()
     if (!res.ok) {
@@ -153,9 +154,9 @@ export default function TeacherDashboard() {
       return
     }
     setData(json)
-    if (!lectureCourseId && json.courses?.length) setLectureCourseId(json.courses[0].id)
-    if (!materialsCourseId && json.courses?.length) setMaterialsCourseId(json.courses[0].id)
-  }
+    setLectureCourseId((prev) => prev || (json.courses?.length ? json.courses[0].id : prev))
+    setMaterialsCourseId((prev) => prev || (json.courses?.length ? json.courses[0].id : prev))
+  }, [])
 
   useEffect(() => {
     let c = false
@@ -169,9 +170,8 @@ export default function TeacherDashboard() {
     return () => {
       c = true
     }
-  }, [])
+  }, [load])
 
-  // Apply admin-defined defaults (stored locally) for new lecture creation.
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem("edutrack.locationDefaults.v1")
@@ -545,9 +545,6 @@ export default function TeacherDashboard() {
                 <h1 className="text-2xl font-bold text-gray-900">Teacher Portal</h1>
               </div>
             <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
-              <Button asChild size="sm" variant="outline" className="border-gray-300">
-                <Link href="/campus-map">Campus map</Link>
-              </Button>
               <Button asChild size="sm" variant="outline" className="border-gray-300">
                 <Link href="/teacher/assessments">Assessments</Link>
               </Button>
@@ -974,6 +971,9 @@ export default function TeacherDashboard() {
                                   2 hours
                                 </button>
                               </div>
+                              <p className="text-xs text-slate-500 mt-1">
+                                Times shown as {formatTimeAmPm(lectureStart)} – {formatTimeAmPm(lectureEnd)}
+                              </p>
                             </div>
                             <div className="md:col-span-2">
                               <Label>Location label</Label>

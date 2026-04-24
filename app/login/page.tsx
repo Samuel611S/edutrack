@@ -77,7 +77,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col edu-dashboard-bg">
-      {/* Top bar — same language as dashboard headers */}
       <header className="edu-dashboard-header sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-md shadow-sm shadow-indigo-950/5">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
           <div className="flex items-center gap-3">
@@ -99,7 +98,6 @@ export default function LoginPage() {
       </header>
 
       <main className="relative flex flex-1 flex-col items-center justify-center px-4 py-10">
-        {/* Soft accents — same family as dashboard (light, not dark blobs) */}
         <div
           className="pointer-events-none absolute right-[10%] top-[18%] h-64 w-64 rounded-full bg-indigo-300/20 blur-3xl"
           aria-hidden

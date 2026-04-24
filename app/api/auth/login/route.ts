@@ -54,15 +54,21 @@ function getUserFromDb(
   role: "admin" | "teacher" | "student",
   id: string,
 ): { id: string; full_name: string; password_hash: string } | null {
+  type UserRow = { id: string; full_name: string; password_hash: string }
   if (role === "admin") {
     return (
-      db.prepare("SELECT id, full_name, password_hash FROM admins WHERE id = ? LIMIT 1").get(id) ?? null
+      (db.prepare("SELECT id, full_name, password_hash FROM admins WHERE id = ? LIMIT 1").get(id) as UserRow | undefined) ??
+      null
     )
   }
   if (role === "teacher") {
     return (
-      db.prepare("SELECT id, full_name, password_hash FROM teachers WHERE id = ? LIMIT 1").get(id) ?? null
+      (db.prepare("SELECT id, full_name, password_hash FROM teachers WHERE id = ? LIMIT 1").get(id) as UserRow | undefined) ??
+      null
     )
   }
-  return db.prepare("SELECT id, full_name, password_hash FROM students WHERE id = ? LIMIT 1").get(id) ?? null
+  return (
+    (db.prepare("SELECT id, full_name, password_hash FROM students WHERE id = ? LIMIT 1").get(id) as UserRow | undefined) ??
+    null
+  )
 }
