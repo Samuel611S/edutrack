@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { randomUUID } from "node:crypto"
 import { getDb } from "@/lib/db"
+import { getAdminUniversityId, isTeacherInUniversity } from "@/lib/admin-university"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 
 export async function GET(request: NextRequest) {
@@ -13,14 +14,17 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1)
   const pageSize = Math.min(100, Math.max(5, parseInt(searchParams.get("pageSize") ?? "25", 10) || 25))
   const offset = (page - 1) * pageSize
+  const universityId = getAdminUniversityId(session.sub)
 
   const db = getDb()
   const pat = `%${q}%`
   const baseFrom = `FROM courses c JOIN teachers t ON t.id = c.teacher_id`
   const where = q
-    ? `WHERE (c.course_code LIKE ? OR c.course_name LIKE ? OR c.semester LIKE ? OR t.full_name LIKE ? OR c.id LIKE ? OR IFNULL(c.description,'') LIKE ?)`
-    : ""
-  const args = q ? [pat, pat, pat, pat, pat, pat] : []
+    ? `WHERE c.university_id = ? AND (c.course_code LIKE ? OR c.course_name LIKE ? OR c.semester LIKE ? OR t.full_name LIKE ? OR c.id LIKE ? OR IFNULL(c.description,'') LIKE ?)`
+    : `WHERE c.university_id = ?`
+  const args = q
+    ? [universityId, pat, pat, pat, pat, pat, pat]
+    : [universityId]
 
   const total = (db.prepare(`SELECT COUNT(*) AS n ${baseFrom} ${where}`).get(...args) as { n: number }).n
   const rows = db
@@ -65,10 +69,10 @@ export async function POST(request: NextRequest) {
   }
 
   const db = getDb()
-  const uni = db.prepare("SELECT university_id FROM admins WHERE id = ?").get(session.sub) as
-    | { university_id: string }
-    | undefined
-  const university_id = uni?.university_id ?? "edutrack_main"
+  const university_id = getAdminUniversityId(session.sub)
+  if (!isTeacherInUniversity(String(teacher_id), university_id)) {
+    return NextResponse.json({ message: "Selected teacher is not in your organization" }, { status: 400 })
+  }
 
   const { description } = body as Record<string, string | number | undefined>
   const id = `course_${randomUUID().slice(0, 8)}`
@@ -81,7 +85,7 @@ export async function POST(request: NextRequest) {
       course_code,
       course_name,
       description != null && String(description).trim() !== "" ? String(description).trim() : null,
-      teacher_id,
+      String(teacher_id).trim(),
       semester,
       credits != null ? Number(credits) : 3,
       max_capacity != null ? Number(max_capacity) : null,

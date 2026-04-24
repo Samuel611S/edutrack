@@ -1,4 +1,5 @@
 import campusGps from "@/lib/campus-gps.json"
+import { sectionLettersToZeroBased } from "@/lib/section-letters"
 
 export type LatLngTuple = [number, number]
 
@@ -7,6 +8,15 @@ type CampusGpsShape = {
 }
 
 const campusData = campusGps as unknown as CampusGpsShape
+
+const MAX_NUMBERED_SECTION = (() => {
+  let max = 0
+  for (const k of Object.keys(campusData.sections || {})) {
+    const m = /^section_(\d+)$/.exec(k)
+    if (m) max = Math.max(max, parseInt(m[1], 10))
+  }
+  return max
+})()
 
 function normalizeLocation(s: string) {
   return String(s || "")
@@ -28,16 +38,22 @@ export function lectureLocationToSectionKey(location: string): string | null {
     if (direct) return direct
   }
 
-  const letterMatch = raw.match(/\bsection\s*([a-h])\b/)
-  if (letterMatch?.[1]) {
-    const key = `section_${letterMatch[1].toLowerCase()}`
-    if (sections?.[key]) return key
+  const letterMatch = raw.match(/\bsection\s+([a-z]+)\b/)
+  if (letterMatch?.[1] && MAX_NUMBERED_SECTION > 0) {
+    const idx = sectionLettersToZeroBased(letterMatch[1])
+    if (idx != null && idx >= 0 && idx < MAX_NUMBERED_SECTION) {
+      const key = `section_${String(idx + 1).padStart(2, "0")}`
+      if (sections?.[key]) return key
+    }
   }
 
-  const single = raw.match(/^\s*([a-h])\s*$/)
-  if (single?.[1]) {
-    const key = `section_${single[1].toLowerCase()}`
-    if (sections?.[key]) return key
+  const numMatch = raw.match(/\bsection\s*(\d+)\b/)
+  if (numMatch?.[1] && MAX_NUMBERED_SECTION > 0) {
+    const n = parseInt(numMatch[1], 10)
+    if (n >= 1 && n <= MAX_NUMBERED_SECTION) {
+      const key = `section_${String(n).padStart(2, "0")}`
+      if (sections?.[key]) return key
+    }
   }
 
   if (raw.includes("entrance")) return "building"

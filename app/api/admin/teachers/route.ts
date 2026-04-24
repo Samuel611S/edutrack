@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
+import { getAdminUniversityId } from "@/lib/admin-university"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 
 export async function GET(request: NextRequest) {
@@ -12,13 +13,14 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1)
   const pageSize = Math.min(100, Math.max(5, parseInt(searchParams.get("pageSize") ?? "25", 10) || 25))
   const offset = (page - 1) * pageSize
+  const universityId = getAdminUniversityId(session.sub)
 
   const db = getDb()
   const pat = `%${q}%`
   const where = q
-    ? "WHERE (id LIKE ? OR email LIKE ? OR full_name LIKE ? OR employee_id LIKE ? OR IFNULL(department,'') LIKE ?)"
-    : ""
-  const args = q ? [pat, pat, pat, pat, pat] : []
+    ? "WHERE university_id = ? AND (id LIKE ? OR email LIKE ? OR full_name LIKE ? OR employee_id LIKE ? OR IFNULL(department,'') LIKE ?)"
+    : "WHERE university_id = ?"
+  const args = q ? [universityId, pat, pat, pat, pat, pat] : [universityId]
 
   const total = (
     db.prepare(`SELECT COUNT(*) AS n FROM teachers ${where}`).get(...args) as { n: number }
@@ -57,10 +59,7 @@ export async function POST(request: NextRequest) {
   }
 
   const db = getDb()
-  const uni = db.prepare("SELECT university_id FROM admins WHERE id = ?").get(session.sub) as
-    | { university_id: string }
-    | undefined
-  const university_id = uni?.university_id ?? "edutrack_main"
+  const university_id = getAdminUniversityId(session.sub)
 
   try {
     db.prepare(

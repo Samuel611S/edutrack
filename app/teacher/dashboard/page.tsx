@@ -20,7 +20,6 @@ import {
   MapPin,
   Download,
   Save,
-  BookOpen,
   Loader2,
   Video,
 } from "lucide-react"
@@ -30,6 +29,9 @@ import { useCallback, useEffect, useState } from "react"
 import campusGps from "@/lib/campus-gps.json"
 import { endTimeFromStartPlusMinutes, minutesBetweenSameDay } from "@/lib/lecture-duration"
 import { formatTimeAmPm } from "@/lib/time-format"
+
+type LecturePin = [string, number, number]
+const LECTURE_SECTION_PINS = campusGps.lectureLocations as LecturePin[]
 
 type CourseRow = {
   id: string
@@ -104,16 +106,24 @@ export default function TeacherDashboard() {
   const [lectureDate, setLectureDate] = useState("")
   const [lectureStart, setLectureStart] = useState("10:00")
   const [lectureEnd, setLectureEnd] = useState(() => endTimeFromStartPlusMinutes("10:00", 90) ?? "11:30")
-  const [lectureLocation, setLectureLocation] = useState(String(campusGps.lectureLocations[0][0]))
-  const [lectureLat, setLectureLat] = useState(String(campusGps.lectureLocations[0][1]))
-  const [lectureLng, setLectureLng] = useState(String(campusGps.lectureLocations[0][2]))
+  const [lectureLocation, setLectureLocation] = useState(String(LECTURE_SECTION_PINS[0]?.[0] ?? "Section A"))
+  const [lectureLat, setLectureLat] = useState(String(LECTURE_SECTION_PINS[0]?.[1] ?? ""))
+  const [lectureLng, setLectureLng] = useState(String(LECTURE_SECTION_PINS[0]?.[2] ?? ""))
+
+  const applyLectureSectionIndex = useCallback((index: number) => {
+    const row = LECTURE_SECTION_PINS[index]
+    if (!row) return
+    setLectureLocation(row[0])
+    setLectureLat(String(row[1]))
+    setLectureLng(String(row[2]))
+  }, [])
+
+  const rawLectureSectionIndex = LECTURE_SECTION_PINS.findIndex(([name]) => name === lectureLocation)
+  const lectureSectionSelectIndex = rawLectureSectionIndex >= 0 ? rawLectureSectionIndex : 0
   const [lectureRadius, setLectureRadius] = useState("100")
   const [saving, setSaving] = useState(false)
   const [rosterLectureId, setRosterLectureId] = useState<string | null>(null)
   const [roster, setRoster] = useState<{ student_id: string; full_name: string; status: string | null }[]>([])
-
-  const [showNewCourse, setShowNewCourse] = useState(false)
-  const [newCourse, setNewCourse] = useState(emptyCourseForm)
 
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null)
   const [editCourse, setEditCourse] = useState(emptyCourseForm)
@@ -182,6 +192,12 @@ export default function TeacherDashboard() {
       // ignore
     }
   }, [])
+
+  useEffect(() => {
+    if (!showLectureForm) return
+    const idx = LECTURE_SECTION_PINS.findIndex(([name]) => name === lectureLocation)
+    if (idx < 0) applyLectureSectionIndex(0)
+  }, [showLectureForm, lectureLocation, applyLectureSectionIndex])
 
   useEffect(() => {
     if (!data) return
@@ -415,39 +431,6 @@ export default function TeacherDashboard() {
     }
   }
 
-  const createCourse = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-    setError("")
-    try {
-      const res = await fetch("/api/teacher/courses", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          course_code: newCourse.course_code,
-          course_name: newCourse.course_name,
-          description: newCourse.description || null,
-          semester: newCourse.semester,
-          credits: Number(newCourse.credits) || 3,
-          max_capacity: newCourse.max_capacity === "" ? null : Number(newCourse.max_capacity),
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) {
-        setError(json.message || "Could not create course")
-        return
-      }
-      setShowNewCourse(false)
-      setNewCourse(emptyCourseForm)
-      await load()
-    } catch {
-      setError("Network error")
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const startEditCourse = (c: CourseRow) => {
     setEditingCourseId(c.id)
     setEditCourse({
@@ -667,89 +650,9 @@ export default function TeacherDashboard() {
                   </TabsList>
 
                   <TabsContent value="courses" className="space-y-4">
-                    <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <div className="mb-4 space-y-2">
                       <h2 className="text-xl font-bold text-gray-900">My Courses</h2>
-                      <Button className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={() => setShowNewCourse(true)}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add course
-                      </Button>
                     </div>
-
-                    {showNewCourse && (
-                      <Card className="border-indigo-200 bg-indigo-50/50">
-                        <CardHeader>
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <BookOpen className="w-5 h-5" />
-                            New course
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <form onSubmit={createCourse} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <Label>Course code</Label>
-                              <Input
-                                value={newCourse.course_code}
-                                onChange={(e) => setNewCourse((p) => ({ ...p, course_code: e.target.value }))}
-                                required
-                                placeholder="e.g. CS410"
-                              />
-                            </div>
-                            <div>
-                              <Label>Semester</Label>
-                              <Input
-                                value={newCourse.semester}
-                                onChange={(e) => setNewCourse((p) => ({ ...p, semester: e.target.value }))}
-                                required
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <Label>Course name</Label>
-                              <Input
-                                value={newCourse.course_name}
-                                onChange={(e) => setNewCourse((p) => ({ ...p, course_name: e.target.value }))}
-                                required
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <Label>Description</Label>
-                              <textarea
-                                className="w-full min-h-[88px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
-                                value={newCourse.description}
-                                onChange={(e) => setNewCourse((p) => ({ ...p, description: e.target.value }))}
-                                placeholder="Syllabus summary, topics, prerequisites…"
-                              />
-                            </div>
-                            <div>
-                              <Label>Credits</Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                value={newCourse.credits}
-                                onChange={(e) => setNewCourse((p) => ({ ...p, credits: e.target.value }))}
-                              />
-                            </div>
-                            <div>
-                              <Label>Max capacity (optional)</Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                value={newCourse.max_capacity}
-                                onChange={(e) => setNewCourse((p) => ({ ...p, max_capacity: e.target.value }))}
-                                placeholder="e.g. 40"
-                              />
-                            </div>
-                            <div className="md:col-span-2 flex gap-2">
-                              <Button type="submit" disabled={saving} className="bg-indigo-600">
-                                {saving ? "Saving…" : "Create course"}
-                              </Button>
-                              <Button type="button" variant="outline" onClick={() => setShowNewCourse(false)}>
-                                Cancel
-                              </Button>
-                            </div>
-                          </form>
-                        </CardContent>
-                      </Card>
-                    )}
 
                     {editingCourseId && (
                       <Card className="border-amber-200 bg-amber-50/40">
@@ -976,16 +879,23 @@ export default function TeacherDashboard() {
                               </p>
                             </div>
                             <div className="md:col-span-2">
-                              <Label>Location label</Label>
-                              <Input value={lectureLocation} onChange={(e) => setLectureLocation(e.target.value)} required />
-                            </div>
-                            <div>
-                              <Label>Latitude</Label>
-                              <Input value={lectureLat} onChange={(e) => setLectureLat(e.target.value)} required />
-                            </div>
-                            <div>
-                              <Label>Longitude</Label>
-                              <Input value={lectureLng} onChange={(e) => setLectureLng(e.target.value)} required />
+                              <Label>Section (attendance uses this area)</Label>
+                              <select
+                                className="w-full border rounded-md h-10 px-2 bg-white text-gray-900"
+                                value={lectureSectionSelectIndex}
+                                onChange={(e) => applyLectureSectionIndex(Number(e.target.value))}
+                                required
+                              >
+                                {LECTURE_SECTION_PINS.map((row, i) => (
+                                  <option key={`${i}-${row[0]}`} value={i}>
+                                    {row[0]} — {row[1].toFixed(6)}, {row[2].toFixed(6)}
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-xs text-slate-500 mt-1">
+                                Location saved as <span className="font-medium text-slate-700">{lectureLocation}</span> with
+                                the GPS pin above (students must check in inside this section polygon).
+                              </p>
                             </div>
                             <div className="md:col-span-2 flex gap-2">
                               <Button type="submit" disabled={saving}>

@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDb } from "@/lib/db"
+import { getAdminUniversityId, isCourseInUniversity, isTeacherInUniversity } from "@/lib/admin-university"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 
 type Params = { params: Promise<{ courseId: string }> }
@@ -16,9 +17,19 @@ export async function PATCH(request: NextRequest, context: Params) {
     string | number | null | undefined
   >
 
+  const universityId = getAdminUniversityId(session.sub)
+  if (!isCourseInUniversity(courseId, universityId)) {
+    return NextResponse.json({ message: "Not found" }, { status: 404 })
+  }
+
+  if (teacher_id !== undefined) {
+    const tid = String(teacher_id).trim()
+    if (!isTeacherInUniversity(tid, universityId)) {
+      return NextResponse.json({ message: "Selected teacher is not in your organization" }, { status: 400 })
+    }
+  }
+
   const db = getDb()
-  const exists = db.prepare("SELECT id FROM courses WHERE id = ?").get(courseId) as { id: string } | undefined
-  if (!exists) return NextResponse.json({ message: "Not found" }, { status: 404 })
 
   const updates: string[] = []
   const values: (string | number | null)[] = []
@@ -72,8 +83,13 @@ export async function DELETE(_request: NextRequest, context: Params) {
   if (session.role !== "admin") return forbidden()
 
   const { courseId } = await context.params
+  const universityId = getAdminUniversityId(session.sub)
+  if (!isCourseInUniversity(courseId, universityId)) {
+    return NextResponse.json({ message: "Not found" }, { status: 404 })
+  }
+
   const db = getDb()
-  const res = db.prepare("DELETE FROM courses WHERE id = ?").run(courseId)
+  const res = db.prepare("DELETE FROM courses WHERE id = ? AND university_id = ?").run(courseId, universityId)
   if (res.changes === 0) return NextResponse.json({ message: "Not found" }, { status: 404 })
   return NextResponse.json({ success: true })
 }

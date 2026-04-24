@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChevronLeft, ChevronRight, Pencil, Search, Trash2, Video } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 type Course = {
   id: string
@@ -42,8 +42,13 @@ export default function AdminCoursesPage() {
   const [searchInput, setSearchInput] = useState("")
   const [msg, setMsg] = useState("")
   const [loading, setLoading] = useState(true)
+  const [assigningCourseId, setAssigningCourseId] = useState<string | null>(null)
   const [teachers, setTeachers] = useState<TeacherOpt[]>([])
   const [editing, setEditing] = useState<Course | null>(null)
+  const editingIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    editingIdRef.current = editing?.id ?? null
+  }, [editing?.id])
   const [editDraft, setEditDraft] = useState({
     course_code: "",
     course_name: "",
@@ -225,6 +230,46 @@ export default function AdminCoursesPage() {
     setMsg("Material removed.")
   }
 
+  const assignTeacherToCourse = async (course: Course, teacherId: string) => {
+    if (teacherId === course.teacher_id) return
+    setAssigningCourseId(course.id)
+    setMsg("")
+    try {
+      const res = await fetch(`/api/admin/courses/${encodeURIComponent(course.id)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teacher_id: teacherId }),
+      })
+      const j = await res.json()
+      if (!res.ok) {
+        setMsg(j.message || "Could not assign teacher")
+        await load()
+        return
+      }
+      const t = teachers.find((x) => x.id === teacherId)
+      setCourses((prev) =>
+        prev.map((row) =>
+          row.id === course.id
+            ? { ...row, teacher_id: teacherId, teacher_name: t?.full_name ?? row.teacher_name }
+            : row,
+        ),
+      )
+      setEditing((ed) =>
+        ed && ed.id === course.id ? { ...ed, teacher_id: teacherId, teacher_name: t?.full_name ?? ed.teacher_name } : ed,
+      )
+      if (editingIdRef.current === course.id) {
+        setEditDraft((d) => ({ ...d, teacher_id: teacherId }))
+      }
+      setMsg("Course assigned to teacher.")
+    } catch {
+      setMsg("Network error")
+      await load()
+    } finally {
+      setAssigningCourseId(null)
+    }
+  }
+
   const remove = async (c: Course) => {
     if (!window.confirm(`Delete ${c.course_code} — ${c.course_name}? Lectures and enrollments go too.`)) return
     setMsg("")
@@ -239,7 +284,10 @@ export default function AdminCoursesPage() {
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
-      <AdminPageShell title="Courses" subtitle="Search, assign instructors, edit catalog entries, or remove courses">
+      <AdminPageShell
+        title="Courses & assignments"
+        subtitle=""
+      >
         {msg && (
           <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-4">{msg}</p>
         )}
@@ -285,7 +333,7 @@ export default function AdminCoursesPage() {
                       <th className="py-3 px-2 font-semibold">Code</th>
                       <th className="py-3 px-2 font-semibold">Name</th>
                       <th className="py-3 px-2 font-semibold">Semester</th>
-                      <th className="py-3 px-2 font-semibold">Teacher</th>
+                      <th className="py-3 px-2 font-semibold min-w-[200px]">Assigned teacher</th>
                       <th className="py-3 px-2 font-semibold w-24">Actions</th>
                     </tr>
                   </thead>
@@ -298,7 +346,35 @@ export default function AdminCoursesPage() {
                           {c.description && <p className="text-xs text-slate-500 line-clamp-2 mt-0.5">{c.description}</p>}
                         </td>
                         <td className="py-2.5 px-2 whitespace-nowrap">{c.semester}</td>
-                        <td className="py-2.5 px-2 text-sm">{c.teacher_name}</td>
+                        <td className="py-2.5 px-2">
+                          <select
+                            className="w-full min-w-[180px] max-w-[min(100%,280px)] border rounded-md h-9 px-2 text-sm bg-white"
+                            value={c.teacher_id}
+                            disabled={assigningCourseId === c.id || teachers.length === 0}
+                            onChange={(e) => void assignTeacherToCourse(c, e.target.value)}
+                            aria-label={`Assign teacher for ${c.course_code}`}
+                          >
+                            {teachers.length === 0 ? (
+                              <option value={c.teacher_id}>{c.teacher_name}</option>
+                            ) : (
+                              <>
+                                {teachers.every((t) => t.id !== c.teacher_id) && (
+                                  <option value={c.teacher_id}>
+                                    {c.teacher_name} (current)
+                                  </option>
+                                )}
+                                {teachers.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    {t.full_name}
+                                  </option>
+                                ))}
+                              </>
+                            )}
+                          </select>
+                          {assigningCourseId === c.id && (
+                            <span className="block text-xs text-slate-500 mt-0.5">Saving…</span>
+                          )}
+                        </td>
                         <td className="py-2.5 px-2">
                           <div className="flex gap-1">
                             <Button type="button" size="sm" variant="outline" className="h-8 px-2" onClick={() => startEdit(c)}>
@@ -364,7 +440,7 @@ export default function AdminCoursesPage() {
                 />
               </div>
               <div>
-                <Label>Instructor</Label>
+                <Label>Assign to teacher</Label>
                 <select
                   className="w-full border rounded-md h-10 px-2 bg-white mt-1"
                   value={editDraft.teacher_id}
@@ -372,7 +448,7 @@ export default function AdminCoursesPage() {
                 >
                   {teachers.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.id} — {t.full_name}
+                      {t.full_name} ({t.id})
                     </option>
                   ))}
                 </select>
@@ -491,8 +567,8 @@ export default function AdminCoursesPage() {
 
         <Card className="bg-white/95 border-white/80 shadow-md">
           <CardHeader>
-            <CardTitle className="text-lg">Add course</CardTitle>
-            <CardDescription>Assign an instructor from your roster</CardDescription>
+            <CardTitle className="text-lg">Add course and assign a teacher</CardTitle>
+            <CardDescription />
           </CardHeader>
           <CardContent>
             <form onSubmit={onSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -513,12 +589,12 @@ export default function AdminCoursesPage() {
                 <textarea id="description" name="description" className="w-full min-h-[72px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm mt-1" placeholder="Short catalog text" />
               </div>
               <div>
-                <Label htmlFor="teacher_id">Teacher</Label>
-                <select id="teacher_id" name="teacher_id" className="w-full border rounded-md h-10 px-2 bg-white mt-1" required>
-                  <option value="">Select…</option>
+                <Label htmlFor="teacher_id">Assign to teacher</Label>
+                <select id="teacher_id" name="teacher_id" className="w-full border rounded-md h-10 px-2 bg-white mt-1" required disabled={teachers.length === 0}>
+                  <option value="">{teachers.length === 0 ? "No teachers available" : "Select a teacher…"}</option>
                   {teachers.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.id} — {t.full_name}
+                      {t.full_name} ({t.id})
                     </option>
                   ))}
                 </select>
@@ -532,8 +608,8 @@ export default function AdminCoursesPage() {
                 <Input id="max_capacity" name="max_capacity" type="number" placeholder="40" className="mt-1 bg-white" />
               </div>
               <div className="md:col-span-2">
-                <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
-                  Create course
+                <Button type="submit" className="bg-purple-600 hover:bg-purple-700" disabled={teachers.length === 0}>
+                  Create and assign
                 </Button>
               </div>
             </form>
