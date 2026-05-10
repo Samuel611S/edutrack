@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { randomUUID } from "node:crypto"
-import { getDb } from "@/lib/db"
+import { getDb, logChange } from "@/lib/db"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 import { minutesBetweenSameDay } from "@/lib/lecture-duration"
 
@@ -66,6 +66,18 @@ export async function POST(request: NextRequest) {
     Number(longitude),
     radius,
   )
+
+  // Log the change
+  logChange(db, session.sub, session.role, "lecture_added", JSON.stringify({
+    lecture_id: id,
+    course_id: courseId,
+    lecture_date: lectureDate,
+    start_time: startTime,
+    end_time: endTime,
+    location,
+    latitude: Number(latitude),
+    longitude: Number(longitude),
+  }), "lecture", id)
 
   return NextResponse.json({ success: true, id })
 }

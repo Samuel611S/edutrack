@@ -495,9 +495,6 @@ export default function StudentDashboard() {
                 <TabsContent value="upcoming" className="space-y-4">
                   <h2 className="text-xl font-bold text-gray-900 mb-4">Upcoming Lectures</h2>
                   <div className="space-y-4">
-                    {data.upcomingLectures.length === 0 && (
-                      <p className="text-gray-600 text-sm">No upcoming lectures in the database.</p>
-                    )}
                     {data.upcomingLectures.map((lecture) => (
                       <Card
                         key={lecture.id}

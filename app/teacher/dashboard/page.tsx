@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import campusGps from "@/lib/campus-gps.json"
 import { endTimeFromStartPlusMinutes, minutesBetweenSameDay } from "@/lib/lecture-duration"
 import { formatTimeAmPm } from "@/lib/time-format"
@@ -143,15 +143,18 @@ export default function TeacherDashboard() {
     title: string
     description: string | null
     material_type: string
-    url: string
+    url: string | null
+    file_name: string | null
+    file_path: string | null
   }
   const [materialsCourseId, setMaterialsCourseId] = useState("")
   const [courseMaterials, setCourseMaterials] = useState<CourseMaterial[]>([])
   const [materialsLoading, setMaterialsLoading] = useState(false)
+  const [materialFile, setMaterialFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [materialForm, setMaterialForm] = useState({
     title: "",
     description: "",
-    materialType: "video" as "video" | "pdf",
     url: "",
   })
   const [savingMaterial, setSavingMaterial] = useState(false)
@@ -254,24 +257,48 @@ export default function TeacherDashboard() {
     if (!materialsCourseId) return
     setSavingMaterial(true)
     setError("")
+
+    const title = materialForm.title.trim()
+    if (!title) {
+      setError("Title is required")
+      setSavingMaterial(false)
+      return
+    }
+
     try {
-      const res = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: materialForm.title,
-          description: materialForm.description || undefined,
-          materialType: materialForm.materialType,
-          url: materialForm.url,
-        }),
-      })
+      let res: Response
+      if (materialFile) {
+        const formData = new FormData()
+        formData.append("title", title)
+        if (materialForm.description.trim()) formData.append("description", materialForm.description.trim())
+        formData.append("file", materialFile)
+        res = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, {
+          method: "POST",
+          credentials: "include",
+          body: formData,
+        })
+      } else {
+        res = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title,
+            description: materialForm.description?.trim() || undefined,
+            url: materialForm.url,
+          }),
+        })
+      }
+
       const json = await res.json()
       if (!res.ok) {
         setError(json.message || "Could not add material")
         return
       }
-      setMaterialForm({ title: "", description: "", materialType: materialForm.materialType, url: "" })
+      setMaterialForm({ title: "", description: "", url: "" })
+      setMaterialFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+
       const listRes = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, { credentials: "include" })
       const listJson = await listRes.json()
       if (listRes.ok) setCourseMaterials(listJson.materials || [])
@@ -686,8 +713,10 @@ export default function TeacherDashboard() {
                               />
                             </div>
                             <div className="md:col-span-2">
-                              <Label>Description</Label>
+                              <Label htmlFor="edit-course-description">Description</Label>
                               <textarea
+                                id="edit-course-description"
+                                aria-label="Course description"
                                 className="w-full min-h-[88px] rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
                                 value={editCourse.description}
                                 onChange={(e) => setEditCourse((p) => ({ ...p, description: e.target.value }))}
@@ -809,8 +838,10 @@ export default function TeacherDashboard() {
                         <CardContent>
                           <form onSubmit={createLecture} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="md:col-span-2">
-                              <Label>Course</Label>
+                              <Label htmlFor="lecture-course">Course</Label>
                               <select
+                                id="lecture-course"
+                                aria-label="Lecture course"
                                 className="w-full border rounded-md h-10 px-2 bg-white"
                                 value={lectureCourseId}
                                 onChange={(e) => setLectureCourseId(e.target.value)}
@@ -879,8 +910,10 @@ export default function TeacherDashboard() {
                               </p>
                             </div>
                             <div className="md:col-span-2">
-                              <Label>Section (attendance uses this area)</Label>
+                              <Label htmlFor="lecture-section">Section (attendance uses this area)</Label>
                               <select
+                                id="lecture-section"
+                                aria-label="Lecture section"
                                 className="w-full border rounded-md h-10 px-2 bg-white text-gray-900"
                                 value={lectureSectionSelectIndex}
                                 onChange={(e) => applyLectureSectionIndex(Number(e.target.value))}
@@ -1016,10 +1049,11 @@ export default function TeacherDashboard() {
                                 <p className="text-gray-900 font-medium">{course.course_name}</p>
                                 <span className="text-emerald-600 font-semibold">{course.avgAttendance}%</span>
                               </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div
-                                  className="bg-emerald-600 h-2 rounded-full transition-all"
-                                  style={{ width: `${Math.min(100, course.avgAttendance)}%` }}
+                              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <progress
+                                  className="w-full h-2 rounded-full bg-emerald-600"
+                                  value={Math.min(100, course.avgAttendance)}
+                                  max={100}
                                 />
                               </div>
                             </div>
@@ -1050,8 +1084,10 @@ export default function TeacherDashboard() {
                     ) : (
                       <>
                         <div className="max-w-md">
-                          <Label>Course</Label>
+                          <Label htmlFor="materials-course">Course</Label>
                           <select
+                            id="materials-course"
+                            aria-label="Materials course"
                             className="w-full border rounded-md h-10 px-2 bg-white mt-1"
                             value={materialsCourseId}
                             onChange={(e) => setMaterialsCourseId(e.target.value)}
@@ -1080,30 +1116,40 @@ export default function TeacherDashboard() {
                                   placeholder="e.g. Week 3 lecture recording"
                                 />
                               </div>
-                              <div>
-                                <Label>Type</Label>
-                                <select
-                                  className="w-full border rounded-md h-10 px-2 bg-white mt-1"
-                                  value={materialForm.materialType}
-                                  onChange={(e) =>
-                                    setMaterialForm((p) => ({
-                                      ...p,
-                                      materialType: e.target.value as "video" | "pdf",
-                                    }))
-                                  }
-                                >
-                                  <option value="video">Video</option>
-                                  <option value="pdf">PDF</option>
-                                </select>
+                              <div className="md:col-span-2">
+                                <Label htmlFor="material-file">File upload (optional)</Label>
+                                <input
+                                  id="material-file"
+                                  aria-label="File upload (optional)"
+                                  ref={fileInputRef}
+                                  type="file"
+                                  className="mt-1 w-full text-sm text-slate-700"
+                                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0] ?? null
+                                    setMaterialFile(file)
+                                    if (file) {
+                                      setMaterialForm((p) => ({ ...p, url: "" }))
+                                    }
+                                  }}
+                                />
+                                {materialFile ? (
+                                  <p className="mt-2 text-xs text-slate-500">Selected file: {materialFile.name}</p>
+                                ) : (
+                                  <p className="mt-2 text-xs text-slate-500">Upload a PDF or Word file, or leave blank and enter a URL.</p>
+                                )}
                               </div>
-                              <div>
+                              <div className="md:col-span-2">
                                 <Label>URL</Label>
                                 <Input
                                   className="mt-1"
                                   value={materialForm.url}
-                                  onChange={(e) => setMaterialForm((p) => ({ ...p, url: e.target.value }))}
-                                  required
-                                  placeholder="https://… or /materials/file.pdf"
+                                  onChange={(e) => {
+                                    setMaterialForm((p) => ({ ...p, url: e.target.value }))
+                                    setMaterialFile(null)
+                                    if (fileInputRef.current) fileInputRef.current.value = ""
+                                  }}
+                                  placeholder="https://… or leave blank for uploaded file"
                                 />
                               </div>
                               <div className="md:col-span-2">
@@ -1145,7 +1191,9 @@ export default function TeacherDashboard() {
                                       <p className="text-xs text-slate-500 uppercase tracking-wide mt-0.5">
                                         {m.material_type}
                                       </p>
-                                      <p className="text-xs text-slate-600 truncate mt-1 font-mono">{m.url}</p>
+                                      <p className="text-xs text-slate-600 truncate mt-1 font-mono">
+                                        {m.file_name ? `${m.file_name} (uploaded file)` : m.url}
+                                      </p>
                                       {m.description && (
                                         <p className="text-xs text-slate-600 mt-1">{m.description}</p>
                                       )}

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, logChange } from "@/lib/db"
 import { getSessionUser, forbidden, unauthorized } from "@/lib/api-auth"
 import { haversineMeters } from "@/lib/geo"
 import { randomUUID } from "node:crypto"
@@ -196,6 +196,18 @@ export async function POST(request: NextRequest) {
       )
     } else {
       return NextResponse.json({ message: "Please check in first." }, { status: 400 })
+    }
+
+    // Log the change
+    if (action === "checkin") {
+      logChange(db, session.sub, session.role, "student_attended_lecture", JSON.stringify({
+        lecture_id: lectureId,
+        course_id: lecture.course_id,
+        location: lecture.location,
+        latitude,
+        longitude,
+        face_verified: faceOk,
+      }), "lecture", lectureId)
     }
 
     return NextResponse.json({

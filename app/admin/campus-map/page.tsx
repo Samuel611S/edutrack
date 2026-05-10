@@ -13,6 +13,7 @@ export default function CampusMapPage() {
   const router = useRouter()
   const [showSettings, setShowSettings] = useState(false)
   const [defaults, setDefaults] = useState({ radiusM: "100", accuracyM: "50" })
+  const [refreshKey, setRefreshKey] = useState(0)
 
   const storageKey = "edutrack.locationDefaults.v1"
   const canUseStorage = useMemo(() => typeof window !== "undefined", [])
@@ -41,6 +42,10 @@ export default function CampusMapPage() {
     setShowSettings(false)
   }
 
+  const handleSectionAdded = () => {
+    setRefreshKey(prev => prev + 1) // Force re-render to show new section
+  }
+
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
       <main className="min-h-screen bg-slate-900">
@@ -65,7 +70,7 @@ export default function CampusMapPage() {
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <CampusMapView />
+          <CampusMapView key={refreshKey} adminMode={true} onSectionAdded={handleSectionAdded} />
 
           <Card className="bg-slate-800 border-slate-700 mt-8">
             <CardHeader>

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { randomUUID } from "node:crypto"
-import { getDb } from "@/lib/db"
+import { getDb, logChange } from "@/lib/db"
 import { getAdminUniversityId, isTeacherInUniversity } from "@/lib/admin-university"
 import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 
@@ -91,6 +91,16 @@ export async function POST(request: NextRequest) {
       max_capacity != null ? Number(max_capacity) : null,
       university_id,
     )
+
+    // Log the change
+    logChange(db, session.sub, session.role, "course_added", JSON.stringify({
+      course_id: id,
+      course_code,
+      course_name,
+      teacher_id: String(teacher_id).trim(),
+      semester,
+      university_id,
+    }), "course", id)
   } catch {
     return NextResponse.json({ message: "Could not create course" }, { status: 400 })
   }

@@ -295,6 +295,57 @@ function migrate(db: Database.Database) {
       CREATE INDEX IF NOT EXISTS idx_assignment_handouts_assignment_id ON assignment_handouts(assignment_id);
     `)
   }
+
+  // Add support for dynamic teacher-created sections
+  if (!tableExists(db, "teacher_sections")) {
+    db.exec(`
+      CREATE TABLE teacher_sections (
+        id TEXT PRIMARY KEY,
+        teacher_id TEXT NOT NULL,
+        section_name TEXT NOT NULL,
+        latitude DECIMAL(10,8) NOT NULL,
+        longitude DECIMAL(11,8) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(teacher_id, section_name),
+        FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_teacher_sections_teacher_id ON teacher_sections(teacher_id);
+    `)
+  }
+
+  // Add file upload support to course materials
+  if (tableExists(db, "course_materials") && !columnExists(db, "course_materials", "file_path")) {
+    db.exec("ALTER TABLE course_materials ADD COLUMN file_path TEXT")
+  }
+  if (tableExists(db, "course_materials") && !columnExists(db, "course_materials", "file_name")) {
+    db.exec("ALTER TABLE course_materials ADD COLUMN file_name TEXT")
+  }
+  if (tableExists(db, "course_materials") && !columnExists(db, "course_materials", "file_size")) {
+    db.exec("ALTER TABLE course_materials ADD COLUMN file_size INTEGER")
+  }
+  if (tableExists(db, "course_materials") && !columnExists(db, "course_materials", "mime_type")) {
+    db.exec("ALTER TABLE course_materials ADD COLUMN mime_type TEXT")
+  }
+
+  // Add change logs table for auditing
+  if (!tableExists(db, "change_logs")) {
+    db.exec(`
+      CREATE TABLE change_logs (
+        id TEXT PRIMARY KEY,
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        user_id TEXT NOT NULL,
+        user_role TEXT NOT NULL,
+        action TEXT NOT NULL,
+        details TEXT,
+        entity_type TEXT,
+        entity_id TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_change_logs_user_id ON change_logs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_change_logs_timestamp ON change_logs(timestamp);
+    `)
+  }
 }
 
 export function getDb(): Database.Database {
@@ -308,4 +359,20 @@ export function getDb(): Database.Database {
   bootstrapIfNeeded(_db)
   migrate(_db)
   return _db
+}
+
+export function logChange(
+  db: Database.Database,
+  userId: string,
+  userRole: string,
+  action: string,
+  details?: string,
+  entityType?: string,
+  entityId?: string
+) {
+  const id = `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  db.prepare(`
+    INSERT INTO change_logs (id, user_id, user_role, action, details, entity_type, entity_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, userId, userRole, action, details || null, entityType || null, entityId || null)
 }

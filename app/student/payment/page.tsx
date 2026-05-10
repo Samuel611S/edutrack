@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { ProtectedRoute } from "@/components/protected-route"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,7 @@ type PaymentData = {
 }
 
 export default function StudentPaymentPage() {
+  const router = useRouter()
   const [data, setData] = useState<PaymentData | null>(null)
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState("")
@@ -79,6 +81,12 @@ export default function StudentPaymentPage() {
     <ProtectedRoute allowedRoles={["student"]}>
       <main className="min-h-screen edu-dashboard-bg">
         <div className="max-w-3xl mx-auto px-4 py-10">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <Button variant="outline" className="border-gray-300" onClick={() => router.back()}>
+              Back
+            </Button>
+            <h1 className="text-2xl font-semibold">Tuition Payment</h1>
+          </div>
           <Card>
             <CardHeader>
               <CardTitle>Tuition Payment</CardTitle>

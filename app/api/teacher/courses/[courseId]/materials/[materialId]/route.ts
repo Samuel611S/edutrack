@@ -43,7 +43,7 @@ export async function PATCH(request: NextRequest, context: Params) {
   }
   if (materialType !== undefined) {
     const mt = parseMaterialType(materialType)
-    if (!mt) return NextResponse.json({ message: "materialType must be video or pdf" }, { status: 400 })
+    if (!mt) return NextResponse.json({ message: "materialType must be video, pdf, word, or docx" }, { status: 400 })
     patch.materialType = mt
   }
   if (url !== undefined) {
