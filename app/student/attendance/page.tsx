@@ -332,6 +332,15 @@ export default function AttendancePage() {
                       <p className="text-gray-900 font-medium">{currentLecture.location}</p>
                     </div>
                   </div>
+<<<<<<< HEAD
+=======
+
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-2">
+                    {phase === "before" && "Before lecture"}
+                    {phase === "during" && "Lecture in progress"}
+                    {phase === "after" && "Lecture ended"}
+                  </p>
+>>>>>>> 7936f61a0e3bc5972eb1675e73a94277fb787de4
                 </CardContent>
               </Card>
 
@@ -386,6 +395,18 @@ export default function AttendancePage() {
                   )}
 
 
+<<<<<<< HEAD
+=======
+                  {lastDistance != null && (
+                    <div
+                      className={`p-3 rounded text-sm ${
+                        isInside ? "bg-emerald-50 border border-emerald-200 text-emerald-900" : "bg-red-50 border border-red-200 text-red-900"
+                      }`}
+                    >
+                      {isInside ? "You are in the lecture area" : "You are outside the lecture area"}
+                    </div>
+                  )}
+>>>>>>> 7936f61a0e3bc5972eb1675e73a94277fb787de4
                 </CardContent>
               </Card>
 

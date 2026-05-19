@@ -157,7 +157,10 @@ function MaterialBlock({
             </p>
           </div>
         )}
-        {safeHref && item.kind === "video" && !yt && (
+        {safeHref && item.kind === "video" && !yt && /\.(mp4|webm|mov|m4v)(\?|$)/i.test(safeHref) && (
+          <video src={safeHref} controls className="w-full max-w-3xl mx-auto rounded-md border border-gray-200 bg-black" />
+        )}
+        {safeHref && item.kind === "video" && !yt && !/\.(mp4|webm|mov|m4v)(\?|$)/i.test(safeHref) && (
           <p className="text-xs text-gray-600">
             This video uses a link that is not embedded here. Use <strong>Open</strong> to watch in a new tab.
           </p>

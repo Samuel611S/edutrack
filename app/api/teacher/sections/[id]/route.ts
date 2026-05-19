@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db'
-import { authenticateToken } from '@/lib/api-auth'
+import { NextRequest, NextResponse } from "next/server"
+import { getDb } from "@/lib/db"
+import { getSessionUser, unauthorized } from "@/lib/api-auth"
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const auth = authenticateToken(req)
-    if (!auth || auth.role !== 'teacher') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await getSessionUser()
+    if (!session || session.role !== "teacher") {
+      return unauthorized()
     }
 
     const body = await req.json()
@@ -19,7 +19,7 @@ export async function PATCH(
 
     // Verify ownership
     const section = db.prepare(`
-      SELECT id, teacher_id FROM teacher_sections WHERE id = ?
+      SELECT id, teacher_id, latitude, longitude FROM teacher_sections WHERE id = ?
     `).get(params.id)
 
     if (!section) {
@@ -29,9 +29,9 @@ export async function PATCH(
       )
     }
 
-    if (section.teacher_id !== auth.userId) {
+    if (section.teacher_id !== session.sub) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: "Unauthorized" },
         { status: 403 }
       )
     }
@@ -41,9 +41,9 @@ export async function PATCH(
       const lat = latitude !== undefined ? latitude : section.latitude
       const lng = longitude !== undefined ? longitude : section.longitude
 
-      if (typeof lat !== 'number' || typeof lng !== 'number') {
+      if (typeof lat !== "number" || typeof lng !== "number") {
         return NextResponse.json(
-          { error: 'latitude and longitude must be numbers' },
+          { error: "latitude and longitude must be numbers" },
           { status: 400 }
         )
       }
@@ -75,7 +75,7 @@ export async function PATCH(
         description !== undefined ? description : null,
         now,
         params.id,
-        auth.userId
+        session.sub
       )
 
       const updatedSection = db.prepare(`
@@ -86,7 +86,7 @@ export async function PATCH(
 
       return NextResponse.json({ section: updatedSection })
     } catch (dbError: any) {
-      if (dbError.message.includes('UNIQUE constraint failed')) {
+      if (dbError.message.includes("UNIQUE constraint failed")) {
         return NextResponse.json(
           { error: `Section "${section_name}" already exists` },
           { status: 409 }
@@ -95,9 +95,9 @@ export async function PATCH(
       throw dbError
     }
   } catch (error) {
-    console.error('Failed to update section:', error)
+    console.error("Failed to update section:", error)
     return NextResponse.json(
-      { error: 'Failed to update section' },
+      { error: "Failed to update section" },
       { status: 500 }
     )
   }
@@ -108,9 +108,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const auth = authenticateToken(req)
-    if (!auth || auth.role !== 'teacher') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await getSessionUser()
+    if (!session || session.role !== "teacher") {
+      return unauthorized()
     }
 
     const db = getDb()
@@ -127,20 +127,20 @@ export async function DELETE(
       )
     }
 
-    if (section.teacher_id !== auth.userId) {
+    if (section.teacher_id !== session.sub) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: "Unauthorized" },
         { status: 403 }
       )
     }
 
-    db.prepare('DELETE FROM teacher_sections WHERE id = ?').run(params.id)
+    db.prepare("DELETE FROM teacher_sections WHERE id = ?").run(params.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Failed to delete section:', error)
+    console.error("Failed to delete section:", error)
     return NextResponse.json(
-      { error: 'Failed to delete section' },
+      { error: "Failed to delete section" },
       { status: 500 }
     )
   }

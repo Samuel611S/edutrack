@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getDb, logChange } from '@/lib/db'
-import { authenticateToken } from '@/lib/api-auth'
-import { randomUUID } from 'crypto'
+import { NextRequest, NextResponse } from "next/server"
+import { getDb, logChange } from "@/lib/db"
+import { getSessionUser, unauthorized } from "@/lib/api-auth"
+import { randomUUID } from "crypto"
 
 export async function GET(req: NextRequest) {
   try {
-    const auth = authenticateToken(req)
-    if (!auth || auth.role !== 'teacher') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await getSessionUser()
+    if (!session || session.role !== "teacher") {
+      return unauthorized()
     }
 
     const db = getDb()
@@ -16,13 +16,13 @@ export async function GET(req: NextRequest) {
       FROM teacher_sections
       WHERE teacher_id = ?
       ORDER BY created_at DESC
-    `).all(auth.userId)
+    `).all(session.sub)
 
     return NextResponse.json({ sections })
   } catch (error) {
-    console.error('Failed to fetch sections:', error)
+    console.error("Failed to fetch sections:", error)
     return NextResponse.json(
-      { error: 'Failed to fetch sections' },
+      { error: "Failed to fetch sections" },
       { status: 500 }
     )
   }
@@ -30,9 +30,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const auth = authenticateToken(req)
-    if (!auth || auth.role !== 'teacher') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const session = await getSessionUser()
+    if (!session || session.role !== "teacher") {
+      return unauthorized()
     }
 
     const body = await req.json()
@@ -41,15 +41,15 @@ export async function POST(req: NextRequest) {
     // Validate input
     if (!section_name || latitude === undefined || longitude === undefined) {
       return NextResponse.json(
-        { error: 'section_name, latitude, and longitude are required' },
+        { error: "section_name, latitude, and longitude are required" },
         { status: 400 }
       )
     }
 
     // Validate coordinates
-    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+    if (typeof latitude !== "number" || typeof longitude !== "number") {
       return NextResponse.json(
-        { error: 'latitude and longitude must be numbers' },
+        { error: "latitude and longitude must be numbers" },
         { status: 400 }
       )
     }
@@ -69,10 +69,10 @@ export async function POST(req: NextRequest) {
       db.prepare(`
         INSERT INTO teacher_sections (id, teacher_id, section_name, latitude, longitude, description, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(id, auth.userId, section_name, latitude, longitude, description || null, now, now)
+      `).run(id, session.sub, section_name, latitude, longitude, description || null, now, now)
 
       // Log the change
-      logChange(db, auth.userId, auth.role, "section_added", JSON.stringify({
+      logChange(db, session.sub, session.role, "section_added", JSON.stringify({
         section_id: id,
         section_name,
         latitude,
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ section }, { status: 201 })
     } catch (dbError: any) {
-      if (dbError.message.includes('UNIQUE constraint failed')) {
+      if (dbError.message.includes("UNIQUE constraint failed")) {
         return NextResponse.json(
           { error: `Section "${section_name}" already exists` },
           { status: 409 }
@@ -97,9 +97,9 @@ export async function POST(req: NextRequest) {
       throw dbError
     }
   } catch (error) {
-    console.error('Failed to create section:', error)
+    console.error("Failed to create section:", error)
     return NextResponse.json(
-      { error: 'Failed to create section' },
+      { error: "Failed to create section" },
       { status: 500 }
     )
   }
