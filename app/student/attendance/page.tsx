@@ -395,11 +395,6 @@ export default function AttendancePage() {
                     </div>
                   </div>
 
-                  <div className="bg-blue-50 p-3 rounded">
-                    <p className="text-gray-600 text-xs mb-1">Allowed radius</p>
-                    <p className="text-gray-900 font-semibold">{currentLecture.allowed_radius_m} m from lecture GPS</p>
-                  </div>
-
                   <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-2">
                     {phase === "before" && "Before lecture"}
                     {phase === "during" && "Lecture in progress"}
@@ -480,7 +475,7 @@ export default function AttendancePage() {
                         isInside ? "bg-emerald-50 border border-emerald-200 text-emerald-900" : "bg-red-50 border border-red-200 text-red-900"
                       }`}
                     >
-                      {lastDistance} m - {isInside ? "inside area" : "outside area"}
+                      {isInside ? "You are in the lecture area" : "You are outside the lecture area"}
                     </div>
                   )}
                 </CardContent>

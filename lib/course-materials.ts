@@ -24,11 +24,14 @@ export function parseMaterialType(raw: unknown): CourseMaterialType | null {
   return null
 }
 
+const VIDEO_EXTENSIONS = [".mp4", ".webm", ".mov", ".m4v", ".mkv", ".avi"]
+
 export function inferMaterialTypeFromFile(fileName: string): CourseMaterialType | null {
   const name = fileName.trim().toLowerCase()
   if (name.endsWith(".pdf")) return "pdf"
   if (name.endsWith(".docx")) return "docx"
   if (name.endsWith(".doc")) return "word"
+  if (VIDEO_EXTENSIONS.some((ext) => name.endsWith(ext))) return "video"
   return null
 }
 

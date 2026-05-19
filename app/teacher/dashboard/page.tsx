@@ -150,7 +150,7 @@ export default function TeacherDashboard() {
   const [materialsCourseId, setMaterialsCourseId] = useState("")
   const [courseMaterials, setCourseMaterials] = useState<CourseMaterial[]>([])
   const [materialsLoading, setMaterialsLoading] = useState(false)
-  const [materialFile, setMaterialFile] = useState<File | null>(null)
+  const [materialFiles, setMaterialFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [materialForm, setMaterialForm] = useState({
     title: "",
@@ -267,11 +267,13 @@ export default function TeacherDashboard() {
 
     try {
       let res: Response
-      if (materialFile) {
+      if (materialFiles.length > 0) {
         const formData = new FormData()
         formData.append("title", title)
         if (materialForm.description.trim()) formData.append("description", materialForm.description.trim())
-        formData.append("file", materialFile)
+        for (const file of materialFiles) {
+          formData.append("files", file)
+        }
         res = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, {
           method: "POST",
           credentials: "include",
@@ -296,7 +298,7 @@ export default function TeacherDashboard() {
         return
       }
       setMaterialForm({ title: "", description: "", url: "" })
-      setMaterialFile(null)
+      setMaterialFiles([])
       if (fileInputRef.current) fileInputRef.current.value = ""
 
       const listRes = await fetch(`/api/teacher/courses/${materialsCourseId}/materials`, { credentials: "include" })
@@ -859,10 +861,6 @@ export default function TeacherDashboard() {
                               <Input type="date" value={lectureDate} onChange={(e) => setLectureDate(e.target.value)} required />
                             </div>
                             <div>
-                              <Label>Radius (m)</Label>
-                              <Input value={lectureRadius} onChange={(e) => setLectureRadius(e.target.value)} />
-                            </div>
-                            <div>
                               <Label>Start time</Label>
                               <Input
                                 type="time"
@@ -1123,20 +1121,27 @@ export default function TeacherDashboard() {
                                   aria-label="File upload (optional)"
                                   ref={fileInputRef}
                                   type="file"
+                                  multiple
                                   className="mt-1 w-full text-sm text-slate-700"
-                                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                  accept=".pdf,.doc,.docx,.mp4,.webm,.mov,.m4v,.mkv,.avi,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*"
                                   onChange={(e) => {
-                                    const file = e.target.files?.[0] ?? null
-                                    setMaterialFile(file)
-                                    if (file) {
+                                    const picked = Array.from(e.target.files ?? [])
+                                    setMaterialFiles(picked)
+                                    if (picked.length > 0) {
                                       setMaterialForm((p) => ({ ...p, url: "" }))
                                     }
                                   }}
                                 />
-                                {materialFile ? (
-                                  <p className="mt-2 text-xs text-slate-500">Selected file: {materialFile.name}</p>
+                                {materialFiles.length > 0 ? (
+                                  <ul className="mt-2 text-xs text-slate-500 space-y-1">
+                                    {materialFiles.map((file) => (
+                                      <li key={`${file.name}-${file.size}-${file.lastModified}`}>{file.name}</li>
+                                    ))}
+                                  </ul>
                                 ) : (
-                                  <p className="mt-2 text-xs text-slate-500">Upload a PDF or Word file, or leave blank and enter a URL.</p>
+                                  <p className="mt-2 text-xs text-slate-500">
+                                    Upload one or more PDF, Word, or video files, or leave blank and enter a URL.
+                                  </p>
                                 )}
                               </div>
                               <div className="md:col-span-2">
@@ -1146,7 +1151,7 @@ export default function TeacherDashboard() {
                                   value={materialForm.url}
                                   onChange={(e) => {
                                     setMaterialForm((p) => ({ ...p, url: e.target.value }))
-                                    setMaterialFile(null)
+                                    setMaterialFiles([])
                                     if (fileInputRef.current) fileInputRef.current.value = ""
                                   }}
                                   placeholder="https://… or leave blank for uploaded file"

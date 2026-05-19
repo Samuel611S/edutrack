@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: `You are outside the allowed area (${Math.round(distance)}m from lecture; max ${radius}m).`,
+          message: "You must be at the lecture location to check in.",
           verifiedLocation: false,
           distanceMeters: Math.round(distance),
         },

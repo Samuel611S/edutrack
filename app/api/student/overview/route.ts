@@ -127,7 +127,7 @@ export async function GET() {
 
   const courseLevel = db
     .prepare(
-      `SELECT m.id, m.title, m.description, m.material_type, m.url, c.course_code, c.course_name
+      `SELECT m.id, m.title, m.description, m.material_type, m.url, m.file_path, c.course_code, c.course_name
        FROM course_materials m
        JOIN courses c ON c.id = m.course_id
        JOIN course_enrollments e ON e.course_id = c.id AND e.student_id = ?
@@ -138,7 +138,8 @@ export async function GET() {
     title: string
     description: string | null
     material_type: string
-    url: string
+    url: string | null
+    file_path: string | null
     course_code: string
     course_name: string
   }[]
@@ -162,7 +163,7 @@ export async function GET() {
       id: `cm:${m.id}`,
       title: m.title,
       kind,
-      href: m.url,
+      href: m.file_path || m.url || null,
       description: m.description,
     })
   }
