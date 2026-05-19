@@ -294,6 +294,13 @@
       "latitude": 30.155718,
       "longitude": 31.614399,
       "type": "facility"
+    },
+    {
+      "id": "custom_marker_01",
+      "name": "Custom marker 01",
+      "latitude": 30.156168396074936,
+      "longitude": 31.61431537756782,
+      "type": "facility"
     }
   ],
   "sections": {

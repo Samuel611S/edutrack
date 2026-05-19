@@ -5,12 +5,6 @@ import { forbidden, getSessionUser, unauthorized } from "@/lib/api-auth"
 
 const MAX_HANDOUT_BYTES = 5 * 1024 * 1024
 
-function isPdf(file: File, filename: string) {
-  const n = filename.toLowerCase()
-  const t = (file.type || "").toLowerCase()
-  return t.includes("pdf") || n.endsWith(".pdf")
-}
-
 export async function GET() {
   const session = await getSessionUser()
   if (!session) return unauthorized()
@@ -83,11 +77,7 @@ export async function POST(request: NextRequest) {
 
   if (file) {
     if (file.size > MAX_HANDOUT_BYTES) {
-      return NextResponse.json({ message: "Handout PDF too large (max 5MB)" }, { status: 413 })
-    }
-    const filename = file.name || "assignment.pdf"
-    if (!isPdf(file, filename)) {
-      return NextResponse.json({ message: "Handout must be a PDF file" }, { status: 400 })
+      return NextResponse.json({ message: "Handout file too large (max 5MB)" }, { status: 413 })
     }
   }
 

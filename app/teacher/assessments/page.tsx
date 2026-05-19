@@ -282,7 +282,7 @@ export default function TeacherAssessmentsPage() {
                   <CardHeader>
                     <CardTitle>Create assignment</CardTitle>
                     <CardDescription>
-                      Optional: attach the assignment brief as a <strong>PDF</strong> (max 5MB). Students submit answers as a <strong>PDF</strong> too.
+                      Optional: attach assignment files (any type, max 5MB). Students submit answers as any file type too.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -295,14 +295,17 @@ export default function TeacherAssessmentsPage() {
                       <Input value={asgDesc} onChange={(e) => setAsgDesc(e.target.value)} placeholder="Optional instructions" />
                     </div>
                     <div>
-                      <Label>Due date/time (optional)</Label>
-                      <Input value={asgDue} onChange={(e) => setAsgDue(e.target.value)} placeholder="2026-05-01 23:59" />
+                      <Label>Answer by (date and time)</Label>
+                      <Input
+                        type="datetime-local"
+                        value={asgDue}
+                        onChange={(e) => setAsgDue(e.target.value)}
+                      />
                     </div>
                     <div>
-                      <Label>Assignment PDF (optional)</Label>
+                      <Label>Assignment file (optional)</Label>
                       <Input
                         type="file"
-                        accept=".pdf,application/pdf"
                         onChange={(e) => setAsgPdf(e.target.files?.[0] || null)}
                         className="cursor-pointer"
                       />

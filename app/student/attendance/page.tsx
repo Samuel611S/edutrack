@@ -11,7 +11,6 @@ import { formatTimeAmPm } from "@/lib/time-format"
 import { getSectionPolygonByKey, lectureLocationToSectionKey, pointInPolygon } from "@/lib/campus-sections"
 
 const POLL_MS = 15_000
-const MAX_OUTSIDE_SEC = 600
 
 interface LectureInfo {
   id: string
@@ -23,19 +22,6 @@ interface LectureInfo {
   location: string
   latitude: number
   longitude: number
-  allowed_radius_m: number
-}
-
-function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371e3
-  const φ1 = (lat1 * Math.PI) / 180
-  const φ2 = (lat2 * Math.PI) / 180
-  const Δφ = ((lat2 - lat1) * Math.PI) / 180
-  const Δλ = ((lon2 - lon1) * Math.PI) / 180
-  const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  return R * c
 }
 
 export default function AttendancePage() {
@@ -48,17 +34,11 @@ export default function AttendancePage() {
   const [currentLecture, setCurrentLecture] = useState<LectureInfo | null>(null)
 
   const [tracking, setTracking] = useState(false)
-  const [outsideSec, setOutsideSec] = useState(0)
-  const [lastDistance, setLastDistance] = useState<number | null>(null)
-  const [isInside, setIsInside] = useState<boolean | null>(null)
   const [tick, setTick] = useState(0)
   const [checkedIn, setCheckedIn] = useState(false)
 
   const trackingRef = useRef(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const lastSampleAtRef = useRef<number | null>(null)
-  const lastWasOutsideRef = useRef(false)
-  const outsideSecRef = useRef(0)
   const pollInFlightRef = useRef(false)
 
   const bounds = useMemo(() => {
@@ -103,7 +83,6 @@ export default function AttendancePage() {
             location: L.location || "",
             latitude: Number(L.latitude),
             longitude: Number(L.longitude),
-            allowed_radius_m: Number(L.allowed_radius_m ?? 100),
           })
         }
       } catch {
@@ -131,12 +110,6 @@ export default function AttendancePage() {
     if (!currentLecture || !bounds || !Number.isFinite(bounds.startMs)) return
     const shouldTrack = checkedIn && phase === "during"
     if (shouldTrack && !trackingRef.current) {
-      lastSampleAtRef.current = null
-      lastWasOutsideRef.current = false
-      outsideSecRef.current = 0
-      setOutsideSec(0)
-      setLastDistance(null)
-      setIsInside(null)
       setTracking(true)
       setError("")
       setSuccess("")
@@ -153,27 +126,7 @@ export default function AttendancePage() {
   const processPosition = useCallback(
     (latitude: number, longitude: number) => {
       if (!currentLecture || !bounds || !Number.isFinite(bounds.startMs)) return
-
-      const at = Date.now()
-      const radius = currentLecture.allowed_radius_m
-      const d = haversineMeters(latitude, longitude, currentLecture.latitude, currentLecture.longitude)
-      const outside = d > radius
-
-      if (lastSampleAtRef.current != null) {
-        const segStart = Math.max(lastSampleAtRef.current, bounds.startMs)
-        const segEnd = Math.min(at, bounds.endMs)
-        if (segEnd > segStart && lastWasOutsideRef.current) {
-          outsideSecRef.current += (segEnd - segStart) / 1000
-        }
-      }
-
-      lastSampleAtRef.current = at
-      lastWasOutsideRef.current = outside
-
-      const rounded = Math.round(outsideSecRef.current * 10) / 10
-      setOutsideSec(rounded)
-      setLastDistance(Math.round(d))
-      setIsInside(!outside)
+      // Location tracked during lecture. Radius check removed per requirement.
     },
     [currentLecture, bounds],
   )
@@ -260,20 +213,6 @@ export default function AttendancePage() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords
-        const d = haversineMeters(
-          latitude,
-          longitude,
-          currentLecture.latitude,
-          currentLecture.longitude,
-        )
-
-        if (d > currentLecture.allowed_radius_m) {
-          setError(
-            `Submit while inside the lecture area (within ${currentLecture.allowed_radius_m} m). You are about ${Math.round(d)} m away.`,
-          )
-          setLoading(false)
-          return
-        }
 
         const sectionKey = lectureLocationToSectionKey(currentLecture.location) ?? "building"
         const sectionPoly = getSectionPolygonByKey(sectionKey)
@@ -325,7 +264,6 @@ export default function AttendancePage() {
     [formatTimeAmPm(currentLecture.start_time), formatTimeAmPm(currentLecture.end_time)].filter((s) => s && s !== "—").join(" – ")
 
   const durationLabel = bounds ? formatDurationMs(bounds.durationMs) : "—"
-  const outsideOver = outsideSec > MAX_OUTSIDE_SEC
 
   void tick
 
@@ -394,17 +332,6 @@ export default function AttendancePage() {
                       <p className="text-gray-900 font-medium">{currentLecture.location}</p>
                     </div>
                   </div>
-
-                  <div className="bg-blue-50 p-3 rounded">
-                    <p className="text-gray-600 text-xs mb-1">Allowed radius</p>
-                    <p className="text-gray-900 font-semibold">{currentLecture.allowed_radius_m} m from lecture GPS</p>
-                  </div>
-
-                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg p-2">
-                    {phase === "before" && "Before lecture"}
-                    {phase === "during" && "Lecture in progress"}
-                    {phase === "after" && "Lecture ended"}
-                  </p>
                 </CardContent>
               </Card>
 
@@ -458,31 +385,7 @@ export default function AttendancePage() {
                     </p>
                   )}
 
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Time outside radius</span>
-                      <span className={outsideOver ? "font-bold text-red-600" : "font-semibold text-gray-900"}>
-                        {Math.floor(outsideSec / 60)}m {Math.round(outsideSec % 60)}s
-                      </span>
-                    </div>
-                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all ${outsideOver ? "bg-red-500" : "bg-indigo-500"}`}
-                        style={{ width: `${Math.min(100, (outsideSec / MAX_OUTSIDE_SEC) * 100)}%` }}
-                      />
-                    </div>
-                    {outsideOver && <p className="text-sm text-red-600 font-medium">Teacher confirmation required.</p>}
-                  </div>
 
-                  {lastDistance != null && (
-                    <div
-                      className={`p-3 rounded text-sm ${
-                        isInside ? "bg-emerald-50 border border-emerald-200 text-emerald-900" : "bg-red-50 border border-red-200 text-red-900"
-                      }`}
-                    >
-                      {lastDistance} m - {isInside ? "inside area" : "outside area"}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
 
